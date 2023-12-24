@@ -1,0 +1,30 @@
+syntax = "proto3";
+package muuzika;
+
+message SingleUintRequest {
+    uint32 number = 1;
+}
+
+message SingleUint64Response {
+    uint64 result = 1;
+    string source = 2;
+}
+
+message TwoStringsRequest {
+    string first = 1;
+    string second = 2;
+}
+
+message SingleStringResponse {
+    string result = 1;
+    string source = 2;
+}
+
+service Calculator {
+    rpc Fibonacci(SingleUintRequest) returns (SingleUint64Response);
+    rpc Factorial(SingleUintRequest) returns (SingleUint64Response);
+}
+
+service StringManipulator {
+    rpc Concatenate(TwoStringsRequest) returns (SingleStringResponse);
+}
