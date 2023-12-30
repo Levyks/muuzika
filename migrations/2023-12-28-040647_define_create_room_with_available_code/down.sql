@@ -1,1 +1,1 @@
-DROP FUNCTION create_room_with_available_code();
+DROP FUNCTION create_room_with_available_code;

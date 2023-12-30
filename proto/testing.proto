@@ -27,4 +27,5 @@ service Calculator {
 
 service StringManipulator {
     rpc Concatenate(TwoStringsRequest) returns (SingleStringResponse);
+    rpc ConcatenateStream(TwoStringsRequest) returns (stream SingleStringResponse);
 }

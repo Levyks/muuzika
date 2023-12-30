@@ -1,11 +1,20 @@
-mod proto;
+
 
 use std::net::SocketAddr;
+use std::pin::Pin;
+use diesel_async::AsyncPgConnection;
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+use diesel_async::pooled_connection::deadpool::Pool;
 use tonic::{Request, Response, Status};
 use tonic::transport::Server;
-use crate::proto::{SingleUintRequest, SingleUint64Response, SingleStringResponse, TwoStringsRequest};
-use crate::proto::calculator_server::{Calculator, CalculatorServer};
-use crate::proto::string_manipulator_server::{StringManipulator, StringManipulatorServer};
+use muuzika::proto::{SingleUintRequest, SingleUint64Response, SingleStringResponse, TwoStringsRequest};
+use muuzika::proto::calculator_server::{Calculator, CalculatorServer};
+use muuzika::proto::string_manipulator_server::{StringManipulator, StringManipulatorServer};
+use tokio::sync::mpsc;
+use tonic::codegen::tokio_stream::wrappers::UnboundedReceiverStream;
+use tonic::codegen::tokio_stream::Stream;
+use muuzika::lobby::service::LobbyServiceImpl;
+use muuzika::proto::lobby_service_server::LobbyServiceServer;
 
 fn fib(n: u32) -> u64 {
     if n <= 1 {
@@ -32,6 +41,7 @@ fn fact(n: u32) -> u64 {
     }
     return result;
 }
+
 
 
 struct CalculatorImpl {
@@ -87,6 +97,34 @@ impl StringManipulator for StringManipulatorImpl {
             source: self.source.clone()
         }))
     }
+
+    type ConcatenateStreamStream = Pin<Box<dyn Stream<Item = Result<SingleStringResponse, Status>> + Send>>;
+
+    async fn concatenate_stream(&self, request: Request<TwoStringsRequest>) -> Result<Response<Self::ConcatenateStreamStream>, Status> {
+        let (tx, rx) = mpsc::unbounded_channel();
+
+        let request = request.into_inner();
+        let source = self.source.clone();
+
+        tokio::spawn(async move {
+            let mut current = request.first;
+
+            for c in request.second.chars() {
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+
+                current.push(c);
+                if let Err(_) = tx.send(Ok(SingleStringResponse {
+                    result: current.clone(),
+                    source: source.clone()
+                })) {
+                    break;
+                }
+            }
+        });
+
+        let stream = UnboundedReceiverStream::new(rx);
+        Ok(Response::new(Box::pin(stream) as Self::ConcatenateStreamStream))
+    }
 }
 
 #[tokio::main]
@@ -95,11 +133,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let port = args[1].parse::<u16>().unwrap();
     let source = args[2].clone();
 
+    println!("Starting server on port {} with source {}", port, source);
+
     let addr = SocketAddr::from(([127,0,0,1], port));
+
+    let config = AsyncDieselConnectionManager::<AsyncPgConnection>::new(std::env::var("DATABASE_URL")?);
+    let pool = Pool::builder(config).build()?;
+
+    let lobby_service = LobbyServiceImpl::new(pool.clone());
     let calculator = CalculatorImpl::new(source.clone());
     let string_manipulator = StringManipulatorImpl::new(source.clone());
 
     Server::builder()
+        .add_service(LobbyServiceServer::new(lobby_service))
         .add_service(CalculatorServer::new(calculator))
         .add_service(StringManipulatorServer::new(string_manipulator))
         .serve(addr)

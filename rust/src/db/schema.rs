@@ -12,8 +12,9 @@ diesel::table! {
         #[max_length = 63]
         username -> Varchar,
         room_id -> Int8,
-        last_seen -> Nullable<Timestamp>,
+        last_seen -> Nullable<Timestamptz>,
         enabled -> Bool,
+        online -> Bool,
     }
 }
 

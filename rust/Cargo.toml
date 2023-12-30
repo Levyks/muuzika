@@ -10,9 +10,13 @@ path = "src/server.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-diesel = { version = "2.1.4", features = ["postgres"] }
+chrono = "0.4.31"
+diesel = { version = "2.1.4", features = ["chrono"] }
+diesel-async = { version = "0.4.1", features = ["postgres", "deadpool"] }
+diesel-derive-enum = { version = "2.1.0", features = ["postgres"] }
 prost = "0.12.3"
 rs-snowflake = "0.6.0"
+thiserror = "1.0.52"
 tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread"] }
 tonic = "0.10.2"
 
