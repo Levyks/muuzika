@@ -1,0 +1,18 @@
+syntax = "proto3";
+package muuzika;
+
+message Empty {}
+
+message CodeList {
+  repeated string codes = 1;
+}
+
+message Id {
+  int64 id = 1;
+}
+
+service LobbyService {
+  rpc ListPossibleCodes(Empty) returns (CodeList) {}
+  rpc GenerateId(Empty) returns (Id) {}
+  // rpc ListAvailableCodes(Empty) returns (CodeList) {}
+}

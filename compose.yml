@@ -1,0 +1,22 @@
+version: "3.9"
+services:
+  mq:
+    image: apache/activemq-artemis:2.32.0-alpine
+    environment:
+      - ARTEMIS_USER
+      - ARTEMIS_PASSWORD
+    ports:
+      - "8161:8161"
+      - "5672:5672"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    volumes:
+      - ./artemis:/var/lib/artemis-instance
+  envoy:
+    image: envoyproxy/envoy:distroless-v1.29-latest
+    ports:
+      - "50051:50051"
+    volumes:
+      - ./envoy/envoy.yaml:/etc/envoy/envoy.yaml

@@ -1,0 +1,1 @@
+DROP TABLE possible_codes;

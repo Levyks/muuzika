@@ -1,0 +1,4 @@
+CREATE TABLE parameters (
+  name VARCHAR(255) NOT NULL PRIMARY KEY,
+  value VARCHAR(255) NOT NULL
+);
