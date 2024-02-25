@@ -3,6 +3,18 @@ name = "muuzika"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "server"
+path = "src/bin/server.rs"
+
+[[bin]]
+name = "worker"
+path = "src/bin/worker.rs"
+
+[[bin]]
+name = "alou"
+path = "src/bin/alou.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -15,6 +27,12 @@ tokio = { version = "1.36.0", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1.0.197", features = ["derive"] }
 tonic = "0.11.0"
 prost = "0.12.3"
+diesel-derive-enum = { version = "2.1.0", features = ["postgres"] }
+fe2o3-amqp = "0.9.8"
+pretty_env_logger = "0.5.0"
+log = "0.4.20"
+url = "2.5.0"
+serde_amqp = "0.9.1"
 
 [build-dependencies]
 tonic-build = "0.11.0"

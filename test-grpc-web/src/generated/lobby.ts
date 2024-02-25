@@ -34,6 +34,15 @@ export interface Id {
      */
     id: bigint;
 }
+/**
+ * @generated from protobuf message muuzika.Message
+ */
+export interface Message {
+    /**
+     * @generated from protobuf field: string message = 1;
+     */
+    message: string;
+}
 // @generated message type with reflection information, may provide speed optimized methods
 class Empty$Type extends MessageType<Empty> {
     constructor() {
@@ -153,10 +162,57 @@ class Id$Type extends MessageType<Id> {
  * @generated MessageType for protobuf message muuzika.Id
  */
 export const Id = new Id$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class Message$Type extends MessageType<Message> {
+    constructor() {
+        super("muuzika.Message", [
+            { no: 1, name: "message", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<Message>): Message {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.message = "";
+        if (value !== undefined)
+            reflectionMergePartial<Message>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Message): Message {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string message */ 1:
+                    message.message = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: Message, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string message = 1; */
+        if (message.message !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.message);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message muuzika.Message
+ */
+export const Message = new Message$Type();
 /**
  * @generated ServiceType for protobuf service muuzika.LobbyService
  */
 export const LobbyService = new ServiceType("muuzika.LobbyService", [
-    { name: "ListPossibleCodes", options: {}, I: Empty, O: CodeList },
-    { name: "GenerateId", options: {}, I: Empty, O: Id }
+    { name: "GenerateId", options: {}, I: Empty, O: Id },
+    { name: "ListenMessages", serverStreaming: true, options: {}, I: Empty, O: Message }
 ]);

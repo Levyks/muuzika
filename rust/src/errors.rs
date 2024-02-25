@@ -1,6 +1,7 @@
-use thiserror::Error;
-use serde::Serialize;
 use diesel_async::pooled_connection::deadpool;
+use fe2o3_amqp::types::definitions::{AmqpError, Error, ErrorCondition};
+use serde::Serialize;
+use thiserror::Error;
 
 #[derive(Error, Serialize, Debug)]
 pub enum MuuzikaError {
@@ -8,7 +9,7 @@ pub enum MuuzikaError {
     InternalError(
         #[from]
         #[serde(skip)]
-        MuuzikaInternalError
+        MuuzikaInternalError,
     ),
 }
 
@@ -25,3 +26,10 @@ pub enum MuuzikaInternalError {
 }
 
 pub type MuuzikaResult<T> = Result<T, MuuzikaError>;
+
+impl From<MuuzikaError> for Error {
+    fn from(e: MuuzikaError) -> Self {
+        let condition = ErrorCondition::AmqpError(AmqpError::InternalError);
+        Error::new(condition, Some(e.to_string()), None)
+    }
+}

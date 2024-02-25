@@ -1,8 +1,11 @@
-mod state;
-pub mod server;
-mod misc;
 mod db;
 mod errors;
-mod services;
+mod misc;
+pub mod mq;
+mod queue;
+pub mod services;
+pub mod state;
 
-pub mod proto { tonic::include_proto!("muuzika"); }
+pub mod proto {
+    tonic::include_proto!("muuzika");
+}

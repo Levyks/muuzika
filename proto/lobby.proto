@@ -11,8 +11,24 @@ message Id {
   int64 id = 1;
 }
 
+message Message {
+  string message = 1;
+}
+
+message Log {
+  string message = 1;
+}
+
+message Job {
+  oneof job {
+    Log log = 1;
+  }
+}
+
 service LobbyService {
-  rpc ListPossibleCodes(Empty) returns (CodeList) {}
+  // rpc ListPossibleCodes(Empty) returns (CodeList) {}
   rpc GenerateId(Empty) returns (Id) {}
+  rpc ListenMessages(Empty) returns (stream Message) {}
+  rpc Log(Message) returns (Empty) {}
   // rpc ListAvailableCodes(Empty) returns (CodeList) {}
 }

@@ -4,9 +4,10 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { LobbyService } from "./lobby";
-import type { Id } from "./lobby";
+import type { Message } from "./lobby";
+import type { ServerStreamingCall } from "@protobuf-ts/runtime-rpc";
 import { stackIntercept } from "@protobuf-ts/runtime-rpc";
-import type { CodeList } from "./lobby";
+import type { Id } from "./lobby";
 import type { Empty } from "./lobby";
 import type { UnaryCall } from "@protobuf-ts/runtime-rpc";
 import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
@@ -15,13 +16,15 @@ import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
  */
 export interface ILobbyServiceClient {
     /**
-     * @generated from protobuf rpc: ListPossibleCodes(muuzika.Empty) returns (muuzika.CodeList);
-     */
-    listPossibleCodes(input: Empty, options?: RpcOptions): UnaryCall<Empty, CodeList>;
-    /**
+     * rpc ListPossibleCodes(Empty) returns (CodeList) {}
+     *
      * @generated from protobuf rpc: GenerateId(muuzika.Empty) returns (muuzika.Id);
      */
     generateId(input: Empty, options?: RpcOptions): UnaryCall<Empty, Id>;
+    /**
+     * @generated from protobuf rpc: ListenMessages(muuzika.Empty) returns (stream muuzika.Message);
+     */
+    listenMessages(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, Message>;
 }
 /**
  * @generated from protobuf service muuzika.LobbyService
@@ -33,17 +36,19 @@ export class LobbyServiceClient implements ILobbyServiceClient, ServiceInfo {
     constructor(private readonly _transport: RpcTransport) {
     }
     /**
-     * @generated from protobuf rpc: ListPossibleCodes(muuzika.Empty) returns (muuzika.CodeList);
-     */
-    listPossibleCodes(input: Empty, options?: RpcOptions): UnaryCall<Empty, CodeList> {
-        const method = this.methods[0], opt = this._transport.mergeOptions(options);
-        return stackIntercept<Empty, CodeList>("unary", this._transport, method, opt, input);
-    }
-    /**
+     * rpc ListPossibleCodes(Empty) returns (CodeList) {}
+     *
      * @generated from protobuf rpc: GenerateId(muuzika.Empty) returns (muuzika.Id);
      */
     generateId(input: Empty, options?: RpcOptions): UnaryCall<Empty, Id> {
-        const method = this.methods[1], opt = this._transport.mergeOptions(options);
+        const method = this.methods[0], opt = this._transport.mergeOptions(options);
         return stackIntercept<Empty, Id>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: ListenMessages(muuzika.Empty) returns (stream muuzika.Message);
+     */
+    listenMessages(input: Empty, options?: RpcOptions): ServerStreamingCall<Empty, Message> {
+        const method = this.methods[1], opt = this._transport.mergeOptions(options);
+        return stackIntercept<Empty, Message>("serverStreaming", this._transport, method, opt, input);
     }
 }

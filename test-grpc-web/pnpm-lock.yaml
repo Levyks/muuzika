@@ -8,9 +8,6 @@ dependencies:
   '@protobuf-ts/grpcweb-transport':
     specifier: ^2.9.3
     version: 2.9.3
-  '@protobuf-ts/plugin':
-    specifier: ^2.9.3
-    version: 2.9.3
   '@protobuf-ts/runtime':
     specifier: ^2.9.3
     version: 2.9.3
@@ -22,6 +19,12 @@ dependencies:
     version: 3.4.19(typescript@5.3.3)
 
 devDependencies:
+  '@protobuf-ts/plugin':
+    specifier: ^2.9.3
+    version: 2.9.3
+  '@protobuf-ts/protoc':
+    specifier: ^2.9.3
+    version: 2.9.3
   '@vitejs/plugin-vue':
     specifier: ^5.0.3
     version: 5.0.4(vite@5.1.3)(vue@3.4.19)
@@ -282,7 +285,7 @@ packages:
     dependencies:
       '@protobuf-ts/runtime': 2.9.3
       typescript: 3.9.10
-    dev: false
+    dev: true
 
   /@protobuf-ts/plugin@2.9.3:
     resolution: {integrity: sha512-tHYACv+nnIV2eoiMxeZhrgMqGiUktzUzrhfgnROg/rr8TecPLp9v5/yqNibN+bad5k7d57aqlTuQKhFl+J4W/g==}
@@ -293,22 +296,20 @@ packages:
       '@protobuf-ts/runtime': 2.9.3
       '@protobuf-ts/runtime-rpc': 2.9.3
       typescript: 3.9.10
-    dev: false
+    dev: true
 
   /@protobuf-ts/protoc@2.9.3:
     resolution: {integrity: sha512-TJ0Ycx/CIBqpB4wpKt6K05kjXj6zv36s/qpdCT/wdJBhpayOVBqLF5NpLp3WIiw1PmIxvqalB6QHKjvnLzGKLA==}
     hasBin: true
-    dev: false
+    dev: true
 
   /@protobuf-ts/runtime-rpc@2.9.3:
     resolution: {integrity: sha512-WelHpctvZeG8yhbb7tnsrLzotq9xjMCXuGuhJ8qMyEdNoBBEodbXseofAYFTebo2/PN2LzyEq3X6vwr5f8jqTA==}
     dependencies:
       '@protobuf-ts/runtime': 2.9.3
-    dev: false
 
   /@protobuf-ts/runtime@2.9.3:
     resolution: {integrity: sha512-nivzCpg/qYD0RX2OmHOahJALb8ndjGmUhNBcTJ0BbXoqKwCSM6vYA+vegzS3rhuaPgbyC7Ec8idlnizzUfIRuw==}
-    dev: false
 
   /@rollup/rollup-android-arm-eabi@4.12.0:
     resolution: {integrity: sha512-+ac02NL/2TCKRrJu2wffk1kZ+RyqxVUlbjSagNgPm94frxtr+XDL12E5Ll1enWskLrtrZ2r8L3wED1orIibV/w==}
@@ -691,7 +692,7 @@ packages:
     resolution: {integrity: sha512-w6fIxVE/H1PkLKcCPsFqKE7Kv7QUwhU8qQY2MueZXWx5cPZdwFupLgKK3vntcK98BtNHZtAF4LA/yl2a7k8R6Q==}
     engines: {node: '>=4.2.0'}
     hasBin: true
-    dev: false
+    dev: true
 
   /typescript@5.3.3:
     resolution: {integrity: sha512-pXWcraxM0uxAS+tN0AG/BF2TyqmHO014Z070UsJ+pFvYuRSq8KH8DmWpnbXe0pEPDHXZV3FcAbJkijJ5oNEnWw==}

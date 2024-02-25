@@ -10,19 +10,20 @@ const transport = new GrpcWebFetchTransport({
 
 const client = new LobbyServiceClient(transport);
 
-async function generateIds(count: number) {
-  console.time("generateIds: " + count);
-  const ids = await Promise.all(
-    Array.from({ length: count }).map(() =>
-      client.generateId({}).then((res) => res.response.id)
-    )
-  );
-  console.timeEnd("generateIds: " + count);
+const abortController = new AbortController();
 
-  console.log("ids", ids);
-}
+const stream = client.listenMessages(
+  {},
+  {
+    abort: abortController.signal,
+  }
+);
 
-Object.assign(window, { generateIds });
+stream.responses.onMessage((message) => {
+  console.log("message", message);
+});
+
+Object.assign(window, { client, stream, abortController });
 </script>
 
 <template>

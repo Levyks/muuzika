@@ -1,0 +1,1 @@
+DROP FUNCTION get_available_code;
