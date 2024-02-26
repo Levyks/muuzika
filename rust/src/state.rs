@@ -3,14 +3,14 @@ use std::fmt::Debug;
 use std::str::FromStr;
 use std::time::{Duration, UNIX_EPOCH};
 
-use diesel::QueryDsl;
-use diesel_async::RunQueryDsl;
+use log::debug;
 use snowflake::SnowflakeIdGenerator;
 use tokio::sync::Mutex;
 use url::Url;
 
 use crate::db::pool::{create_pool, Pool};
-use crate::errors::{MuuzikaInternalError, MuuzikaResult};
+use crate::db::queries::fetch_all_parameters;
+use crate::errors::MuuzikaResult;
 use crate::misc::U5;
 
 pub struct State {
@@ -21,9 +21,10 @@ pub struct State {
 
 impl State {
     pub async fn init(env: &EnvParameters) -> MuuzikaResult<Self> {
-        let pool =
-            create_pool(&env.database_url, env.pool_size).map_err(MuuzikaInternalError::from)?;
+        let pool = create_pool(&env.database_url, env.pool_size).await?;
+
         let db_params = DbParameters::load(&pool).await?;
+        debug!("Loaded database parameters: {:?}", db_params);
         let epoch = UNIX_EPOCH + Duration::from_millis(db_params.snowflake_epoch_offset_ms);
         let id_generator = SnowflakeIdGenerator::with_epoch(
             (&env.snowflake_machine_id).into(),
@@ -47,7 +48,7 @@ impl State {
 #[derive(Debug)]
 pub struct EnvParameters {
     pub database_url: String,
-    pub pool_size: usize,
+    pub pool_size: u32,
     pub snowflake_machine_id: U5,
     pub snowflake_node_id: U5,
     pub mq_url: Url,
@@ -67,11 +68,10 @@ impl EnvParameters {
             mq_url: read_required_env_var_parse("MQ_URL"),
             mq_username: read_required_env_var_parse("MQ_USERNAME"),
             mq_password: read_required_env_var_parse("MQ_PASSWORD"),
-            mq_jobs_queue: read_env_var_parse_default("MQ_JOBS_QUEUE", "muuzika_jobs".to_string()),
-            mq_broadcast_exchange: read_env_var_parse_default(
-                "MQ_BROADCAST_EXCHANGE",
-                "muuzika_broadcast".to_string(),
-            ),
+            mq_jobs_queue: read_env_var_or_else("MQ_JOBS_QUEUE", || "muuzika_jobs".to_string()),
+            mq_broadcast_exchange: read_env_var_or_else("MQ_BROADCAST_EXCHANGE", || {
+                "muuzika_broadcast".to_string()
+            }),
         }
     }
 }
@@ -92,7 +92,7 @@ pub struct DbParameters {
 
 impl DbParameters {
     pub async fn load(pool: &Pool) -> MuuzikaResult<Self> {
-        let map = get_all_db_parameters(pool).await?;
+        let map = fetch_all_parameters(pool).await?;
 
         Ok(Self {
             snowflake_epoch_offset_ms: get_and_parse_db_parameter(
@@ -122,37 +122,21 @@ where
     })
 }
 
-fn read_required_env_var_parse<T: FromStr>(name: &str) -> T
+pub fn read_required_env_var_parse<T: FromStr>(name: &str) -> T
 where
     T::Err: Debug,
 {
     read_env_var_parse(name).expect(&format!("Missing environment variable: {}", name))
 }
 
-fn read_env_var_parse_default<T: FromStr>(name: &str, default: T) -> T
+pub fn read_env_var_or_else<T: FromStr, F: FnOnce() -> T>(name: &str, f: F) -> T
 where
     T::Err: Debug,
 {
-    read_env_var_parse(name).unwrap_or(default)
+    read_env_var_parse(name).unwrap_or_else(f)
 }
 
-async fn get_all_db_parameters(pool: &Pool) -> MuuzikaResult<HashMap<String, String>> {
-    use crate::db::schema::parameters::dsl::*;
-
-    let mut conn = pool.get().await.map_err(MuuzikaInternalError::from)?;
-
-    let map = parameters
-        .select((name, value))
-        .load::<(String, String)>(&mut conn)
-        .await
-        .map_err(MuuzikaInternalError::from)?
-        .into_iter()
-        .collect::<HashMap<_, _>>();
-
-    Ok(map)
-}
-
-pub fn get_and_parse_db_parameter<T: FromStr>(map: &HashMap<String, String>, key: &str) -> T
+fn get_and_parse_db_parameter<T: FromStr>(map: &HashMap<String, String>, key: &str) -> T
 where
     T::Err: Debug,
 {

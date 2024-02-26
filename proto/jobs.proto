@@ -1,0 +1,27 @@
+syntax = "proto3";
+package muuzika.jobs;
+
+message StartNextRoundJob {
+  int64 room_id = 1;
+}
+
+message EndCurrentRoundJob {
+  int64 room_id = 1;
+}
+
+message RemovePlayerJob {
+  int64 player_id = 1;
+}
+
+message RemoveRoomJob {
+  int64 room_id = 1;
+}
+
+message Job {
+  oneof job {
+    StartNextRoundJob start_next_round = 1;
+    EndCurrentRoundJob end_current_round = 2;
+    RemovePlayerJob remove_player = 3;
+    RemoveRoomJob remove_room = 4;
+  }
+}

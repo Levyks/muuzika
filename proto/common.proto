@@ -1,0 +1,55 @@
+syntax = "proto3";
+package muuzika.common;
+
+message Empty {}
+
+enum RoundType {
+  TRACK = 0;
+  ARTIST = 1;
+}
+
+enum RoomStatus {
+  WAITING = 0;
+  PLAYING = 1;
+  FINISHED = 2;
+}
+
+message RoundChoice {
+  uint64 track_id = 1;
+  string label = 2;
+}
+
+message Round {
+  int64 id = 1;
+  uint32 number = 2;
+  RoundType type = 3;
+  string track_url = 4;
+  repeated RoundChoice choices = 5;
+  uint64 start_time = 6;
+  uint64 end_time = 7;
+}
+
+message Player {
+  int64 id = 1;
+  string username = 2;
+  bool is_connected = 3;
+  uint32 score = 4;
+  string avatar_url = 5;
+}
+
+message Playlist {
+  int64 id = 1;
+  string provider = 2;
+  string name = 3;
+  string url = 4;
+  string cover_url = 5;
+  uint32 number_of_tracks = 6;
+  uint32 number_of_playable_tracks = 7;
+  uint32 number_of_playable_artist_rounds = 8;
+}
+
+message RoomOptions {
+  uint32 max_players = 1;
+  uint32 number_of_rounds = 2;
+  uint32 round_duration = 3;
+}

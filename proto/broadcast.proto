@@ -1,0 +1,51 @@
+syntax = "proto3";
+package muuzika.broadcast;
+
+import "common.proto";
+
+message PlayerJoinedBroadcast {
+  string player_id = 1;
+  string username = 2;
+}
+
+message PlayerConnectedBroadcast {
+  string player_id = 1;
+}
+
+message PlayerDisconnectedBroadcast {
+  string player_id = 1;
+}
+
+message PlayerLeftBroadcast {
+  string player_id = 1;
+}
+
+message RoundStartingBroadcast {
+  common.Round round = 1;
+}
+
+message PlayerScore {
+  string player_id = 1;
+  uint32 score = 2;
+}
+
+message RoundEndedBroadcast {
+  int64 round_id = 1;
+  repeated PlayerScore scores = 2;
+  optional common.Round next_round = 3;
+}
+
+message Broadcast {
+  oneof message {
+    PlayerJoinedBroadcast player_joined = 1;
+    PlayerConnectedBroadcast player_connected = 2;
+    PlayerDisconnectedBroadcast player_disconnected = 3;
+    PlayerLeftBroadcast player_left = 4;
+    RoundStartingBroadcast round_starting = 5;
+    RoundEndedBroadcast round_ended = 6;
+  }
+}
+
+service BroadcastService {
+  rpc Subscribe(common.Empty) returns (stream Broadcast);
+}

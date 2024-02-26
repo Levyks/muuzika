@@ -19,20 +19,19 @@ path = "src/bin/alou.rs"
 
 [dependencies]
 derive_more = "0.99.17"
-diesel = { version = "2.1.4" }
-diesel-async = { version = "0.4.1", features = ["postgres", "deadpool"] }
 rs-snowflake = "0.6.0"
 thiserror = "1.0.57"
 tokio = { version = "1.36.0", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1.0.197", features = ["derive"] }
 tonic = "0.11.0"
 prost = "0.12.3"
-diesel-derive-enum = { version = "2.1.0", features = ["postgres"] }
-fe2o3-amqp = "0.9.8"
+fe2o3-amqp = "0.10.0"
 pretty_env_logger = "0.5.0"
 log = "0.4.20"
 url = "2.5.0"
-serde_amqp = "0.9.1"
+serde_amqp = "0.10.0"
+sqlx = { version = "0.7.3", features = ["postgres", "migrate", "chrono", "runtime-tokio"] }
 
 [build-dependencies]
+glob = "0.3.1"
 tonic-build = "0.11.0"

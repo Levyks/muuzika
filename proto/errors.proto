@@ -1,0 +1,44 @@
+syntax = "proto3";
+package muuzika.errors;
+
+/*
+enum ErrorCode {
+  UNKNOWN = 0;
+  OUT_OF_ROOM_CODES = 1;
+  ROOM_NOT_FOUND = 2;
+  ROOM_FULL = 3;
+  USERNAME_TAKEN = 4;
+  INVALID_USERNAME = 5;
+  WRONG_PASSWORD = 6;
+  INVALID_CAPTCHA = 7;
+  ROUND_ENDED = 8;
+  GATEWAY_ERROR = 9;
+}
+ */
+
+// TODO: can I retrieve these names from the frontend or do I need an enum?
+message InternalError {}
+message OutOfRoomCodesError {}
+message RoomNotFoundError {}
+message RoomFullError {}
+message UsernameTakenError {}
+message InvalidUsernameError {}
+message WrongPasswordError {}
+message InvalidCaptchaError {}
+message RoundEndedError {}
+message GatewayError {}
+
+message Error {
+  oneof error {
+    InternalError internal = 1;
+    OutOfRoomCodesError out_of_room_codes = 2;
+    RoomNotFoundError room_not_found = 3;
+    RoomFullError room_full = 4;
+    UsernameTakenError username_taken = 5;
+    InvalidUsernameError invalid_username = 6;
+    WrongPasswordError wrong_password = 7;
+    InvalidCaptchaError invalid_captcha = 8;
+    RoundEndedError round_ended = 9;
+    GatewayError gateway_error = 10;
+  }
+}

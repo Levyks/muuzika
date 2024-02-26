@@ -1,13 +1,10 @@
-use diesel_async::pooled_connection::AsyncDieselConnectionManager;
-use diesel_async::AsyncPgConnection;
-use diesel_async::pooled_connection::deadpool;
+use sqlx::postgres::PgPoolOptions;
 
-pub type Pool = deadpool::Pool<AsyncPgConnection>;
+pub type Pool = sqlx::Pool<sqlx::Postgres>;
 
-pub fn create_pool(database_url: &str, pool_size: usize) -> Result<Pool, deadpool::BuildError> {
-    let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(database_url);
-
-    let pool: Pool = Pool::builder(manager).max_size(pool_size).build()?;
-
-    Ok(pool)
+pub async fn create_pool(database_url: &str, pool_size: u32) -> Result<Pool, sqlx::Error> {
+    PgPoolOptions::new()
+        .max_connections(pool_size)
+        .connect(database_url)
+        .await
 }

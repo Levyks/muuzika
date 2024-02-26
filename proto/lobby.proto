@@ -1,34 +1,36 @@
 syntax = "proto3";
-package muuzika;
+package muuzika.lobby;
 
-message Empty {}
+import "common.proto";
+import "errors.proto";
 
-message CodeList {
-  repeated string codes = 1;
-}
-
-message Id {
+message RoomSync {
   int64 id = 1;
+  string code = 2;
+  repeated common.Player players = 3;
+  optional common.Playlist playlist = 4;
+  common.RoomOptions options = 5;
+  uint32 your_player_id = 6;
 }
 
-message Message {
-  string message = 1;
+message UsernameAndCaptcha {
+  string username = 1;
+  string captcha = 2;
 }
 
-message Log {
-  string message = 1;
+message JoinRoomRequest {
+  string code = 1;
+  UsernameAndCaptcha username_and_captcha = 2;
 }
 
-message Job {
-  oneof job {
-    Log log = 1;
+message RoomResponse {
+  oneof response {
+    RoomSync room_sync = 1;
+    errors.Error error = 2;
   }
 }
 
 service LobbyService {
-  // rpc ListPossibleCodes(Empty) returns (CodeList) {}
-  rpc GenerateId(Empty) returns (Id) {}
-  rpc ListenMessages(Empty) returns (stream Message) {}
-  rpc Log(Message) returns (Empty) {}
-  // rpc ListAvailableCodes(Empty) returns (CodeList) {}
+  rpc CreateRoom(UsernameAndCaptcha) returns (RoomResponse);
+  rpc JoinRoom(JoinRoomRequest) returns (RoomResponse);
 }
