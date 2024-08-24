@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package muuzika.connection_handler;
+
+import "common.proto";
+
+message ServerIdentifier {
+  string callsign = 1;
+}
+
+message PlayerWithServer {
+  string username = 1;
+  string room_code = 2;
+  ServerIdentifier server = 3;
+}
+
+service ConnectionHandlerService {
+  rpc OnConnect(PlayerWithServer) returns (common.Empty) {}
+  rpc OnDisconnect(PlayerWithServer) returns (common.Empty) {}
+  rpc ImAlive(ServerIdentifier) returns (common.Empty) {}
+}

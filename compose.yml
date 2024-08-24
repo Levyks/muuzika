@@ -1,0 +1,9 @@
+services:
+  mq:
+    image: apache/activemq-artemis:2.37.0-alpine
+    ports:
+      - "8161:8161"
+      - "61616:61616"
+      - "5672:5672"
+    volumes:
+      - ./artemis/broker.xml:/var/lib/artemis-instance/etc-override/broker.xml
