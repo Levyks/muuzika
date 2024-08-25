@@ -1,0 +1,14 @@
+{
+  "settings": [
+    {
+      "options": {
+        "grpc": {
+          "endpoint": "{{ env.GRPC_ENDPOINT }}"
+        },
+        "rest": {
+          "pathParams": []
+        }
+      }
+    }
+  ]
+}

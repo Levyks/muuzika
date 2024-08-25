@@ -2,3 +2,7 @@ syntax = "proto3";
 package muuzika.common;
 
 message Empty {}
+
+enum Error {
+  INTERNAL = 0;
+}

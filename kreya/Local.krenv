@@ -1,0 +1,7 @@
+{
+  "id": "80363d71-ea6d-4bde-98fb-db6a29855c87",
+  "color": "#60A5FA",
+  "globalContent": {
+    "GRPC_ENDPOINT": "http://localhost:50051"
+  }
+}

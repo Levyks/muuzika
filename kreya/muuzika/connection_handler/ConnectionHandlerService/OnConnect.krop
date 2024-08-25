@@ -1,0 +1,13 @@
+{
+  "details": {
+    "methodFqn": "muuzika.connection_handler.ConnectionHandlerService.OnConnect"
+  },
+  "requests": [
+    {
+      "location": "OnConnect-request.json"
+    }
+  ],
+  "operationType": "unary",
+  "invokerName": "grpc",
+  "importStreamId": "ce4bf880-02fe-4e92-899d-fdae8eb77ed3"
+}

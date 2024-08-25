@@ -1,5 +1,6 @@
 pub mod services;
-mod state;
+pub mod state;
+pub mod errors;
 
 pub mod proto {
     pub mod common {
