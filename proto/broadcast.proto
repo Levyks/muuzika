@@ -1,0 +1,18 @@
+syntax = "proto3";
+package muuzika.broadcast;
+
+message PlayerIdentifier {
+  string username = 1;
+}
+
+message BroadcastMessageData {
+  oneof data {
+    PlayerIdentifier player_connected = 2;
+    PlayerIdentifier player_disconnected = 3;
+  }
+}
+
+message BroadcastMessage {
+  string room_code = 1;
+  BroadcastMessageData data = 2;
+}

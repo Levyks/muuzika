@@ -9,4 +9,7 @@ pub mod proto {
     pub mod connection_handler {
         tonic::include_proto!("muuzika.connection_handler");
     }
+    pub mod broadcast {
+        tonic::include_proto!("muuzika.broadcast");
+    }
 }

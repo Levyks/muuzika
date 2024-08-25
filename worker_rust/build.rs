@@ -1,5 +1,6 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let protos = [
+        "../proto/broadcast.proto",
         "../proto/common.proto",
         "../proto/connection_handler.proto",
     ];
