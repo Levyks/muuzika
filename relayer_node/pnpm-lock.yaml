@@ -20,6 +20,9 @@ importers:
       '@protobuf-ts/runtime-rpc':
         specifier: ^2.9.4
         version: 2.9.4
+      nodejs-snowflake:
+        specifier: ^2.0.1
+        version: 2.0.1
       rhea:
         specifier: ^3.0.2
         version: 3.0.2
@@ -401,6 +404,9 @@ packages:
 
   ms@2.1.2:
     resolution: {integrity: sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==}
+
+  nodejs-snowflake@2.0.1:
+    resolution: {integrity: sha512-zMfDorNNsJm1OWWx/OUUGVT0bQ3TwC2ti4URD8UjnpffVLtLpy3eBDIaV5TnLs91YrRhwBD6L0StqU6YtnZt9A==}
 
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
@@ -792,6 +798,8 @@ snapshots:
       picomatch: 2.3.1
 
   ms@2.1.2: {}
+
+  nodejs-snowflake@2.0.1: {}
 
   normalize-path@3.0.0: {}
 

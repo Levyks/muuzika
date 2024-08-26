@@ -1,12 +1,13 @@
 {
   "name": "@muuzika/relayer",
   "version": "0.0.1",
-  "main": "index.ts",
+  "main": "src/server.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "dev": "tsx index.ts",
-    "dev:watch": "tsx watch index.ts",
+    "dev": "tsx src/server.ts",
+    "dev:watch": "tsx watch src/server.ts",
+    "start": "node dist/src/server.js",
     "compile:protos": "protoc --ts_out ./compiled --ts_opt ts_nocheck --ts_opt eslint_disable --ts_opt add_pb_suffix --proto_path ../proto ../proto/*.proto && replace-in-files --regex='import (.*?) from \"\\.\\/(.*?)\";' --replacement='import $1 from \"./$2.js\";' './compiled/*.ts'"
   },
   "type": "module",
@@ -27,6 +28,7 @@
     "@protobuf-ts/grpc-transport": "^2.9.4",
     "@protobuf-ts/runtime": "^2.9.4",
     "@protobuf-ts/runtime-rpc": "^2.9.4",
+    "nodejs-snowflake": "^2.0.1",
     "rhea": "^3.0.2",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.48.0"
   }
