@@ -1,0 +1,17 @@
+[package]
+name = "muuzika-registry"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.93"
+prost = "0.13.3"
+sqlx = { version = "0.8.2", features = ["runtime-tokio", "sqlite"] }
+tokio = { version = "1.41.1", features = ["macros", "rt-multi-thread"] }
+tonic = "0.12.3"
+log = "0.4.22"
+pretty_env_logger = "0.5.0"
+
+[build-dependencies]
+glob = "0.3.1"
+tonic-build = "0.12.3"

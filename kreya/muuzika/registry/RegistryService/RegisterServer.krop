@@ -1,0 +1,13 @@
+{
+  "details": {
+    "methodFqn": "muuzika.registry.RegistryService.RegisterServer"
+  },
+  "requests": [
+    {
+      "location": "RegisterServer-request-0.json"
+    }
+  ],
+  "operationType": "duplexStreaming",
+  "invokerName": "grpc",
+  "importStreamId": "857f8060-6a42-4702-89f1-a13e71112799"
+}

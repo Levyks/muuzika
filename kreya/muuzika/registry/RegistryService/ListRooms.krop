@@ -1,0 +1,13 @@
+{
+  "details": {
+    "methodFqn": "muuzika.registry.RegistryService.ListRooms"
+  },
+  "requests": [
+    {
+      "location": "ListRooms-request.json"
+    }
+  ],
+  "operationType": "unary",
+  "invokerName": "grpc",
+  "importStreamId": "857f8060-6a42-4702-89f1-a13e71112799"
+}

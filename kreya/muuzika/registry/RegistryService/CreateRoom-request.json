@@ -1,0 +1,5 @@
+{
+  "leaderUsername": "Delaware",
+  "isPublic": false,
+  "password": "{{ faker.internet.password }}"
+}
