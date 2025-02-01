@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package muuzika.registry;
+
+import "common.proto";
+
+import "google/protobuf/empty.proto";
+import "registry/common.proto";
+
+message ServerRegistrationRequest {
+  string callsign = 1;
+  string address = 2;
+  repeated RoomRegistryDefinition rooms = 3;
+  optional uint32 capacity = 4;
+  optional string type = 5;
+}
+
+message ServerRegistrationResponse {
+  ServerId server_id = 1;
+  repeated RoomCodeChange conflicts = 2;
+}
+
+message ServerRegistrationError {
+  oneof error {
+    google.protobuf.Empty internal_error = 1;
+  }
+}
+
+message RoomCodeChange {
+  common.RoomCode before = 1;
+  common.RoomCode after = 2;
+}

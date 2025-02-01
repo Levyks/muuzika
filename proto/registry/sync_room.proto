@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package muuzika.registry;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+
+message SyncRoomResponse {
+  oneof response {
+    google.protobuf.Empty ok = 1;
+    common.RoomCode code_changed = 2;
+  }
+}
+
+message SyncRoomError {
+  oneof error {
+    google.protobuf.Empty internal_error = 1;
+  }
+}

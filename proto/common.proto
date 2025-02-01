@@ -6,14 +6,7 @@ message RoomCode {
   uint32 code = 1;
 }
 
-message PaginationRequest {
-  optional uint32 page = 1;
-  optional uint32 page_size = 2;
-}
-
-message PaginationResponse {
-  uint32 page = 1;
-  uint32 page_size = 2;
-  uint32 total_pages = 3;
-  uint32 total_items = 4;
+message MuuzikaError {
+  string code = 1;
+  string message = 2;
 }

@@ -1,9 +1,5 @@
-#[macro_use]
-extern crate log;
-
 use muuzika_registry::db::init_db;
-use muuzika_registry::proto::registry::registry_service_server::RegistryServiceServer;
-use muuzika_registry::service::RegistryServiceImpl;
+use muuzika_registry::services::RegistryGrpcServices;
 use muuzika_registry::state::State;
 use std::env;
 use std::net::SocketAddr;
@@ -25,10 +21,9 @@ async fn main() -> anyhow::Result<()> {
     let db = init_db().await?;
     let state = Arc::new(State { db });
 
-    println!("Registry server listening on {}", listen_address);
-
+    log::info!("Registry server listening on {}", listen_address);
     Server::builder()
-        .add_service(RegistryServiceServer::new(RegistryServiceImpl { state }))
+        .add_registry_services(&state)
         .serve(listen_address)
         .await?;
 

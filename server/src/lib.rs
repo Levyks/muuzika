@@ -1,7 +1,5 @@
-mod codes;
-pub mod server;
-pub mod services;
-pub mod state;
+mod registry;
+mod state;
 
 pub mod proto {
     pub mod common {

@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package muuzika.registry;
+
+import "google/protobuf/empty.proto";
+
+import "registry/common.proto";
+import "registry/registration.proto";
+import "registry/create_room.proto";
+import "registry/sync_room.proto";
+
+// SERVER -> REGISTRY
+
+message ServerToRegistryRequest {
+  oneof request {
+    ServerRegistrationRequest registration = 1;
+    RoomRegistryDefinition sync_room = 2;
+  }
+}
+
+message ServerToRegistrySuccess {
+  oneof success {
+    google.protobuf.Empty create_room = 1;
+  }
+}
+
+message ServerToRegistryError {
+  oneof error {
+    CreateRoomInServerError create_room = 1;
+  }
+}
+
+// REGISTRY -> SERVER
+
+message RegistryToServerRequest {
+  oneof request {
+    CreateRoomInServerRequest create_room = 1;
+  }
+}
+
+message RegistryToServerSuccess {
+  oneof success {
+    ServerRegistrationResponse registration_response = 1;
+    SyncRoomResponse sync_room = 2;
+  }
+}
+
+message RegistryToServerError {
+  oneof error {
+    ServerRegistrationError registration_error = 1;
+    SyncRoomError sync_room = 2;
+  }
+}
+
+//
+
+message ServerToRegistryResponse {
+  oneof response {
+    ServerToRegistrySuccess success = 1;
+    ServerToRegistryError error = 2;
+  }
+}
+
+message ServerToRegistryMessage {
+  optional uint64 request_id = 1;
+  oneof message {
+    ServerToRegistryRequest request = 2;
+    ServerToRegistryResponse response = 3;
+  }
+}
+
+message RegistryToServerResponse {
+  oneof response {
+    RegistryToServerSuccess success = 1;
+    RegistryToServerError error = 2;
+  }
+}
+
+message RegistryToServerMessage {
+  optional uint64 request_id = 1;
+  oneof message {
+    RegistryToServerRequest request = 2;
+    RegistryToServerResponse response = 3;
+  }
+}
+
+service RegistryService {
+  rpc RegisterServer(stream ServerToRegistryMessage) returns (stream RegistryToServerMessage);
+}
+
+
+

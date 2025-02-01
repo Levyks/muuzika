@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package muuzika.registry;
+
+import "common.proto";
+
+message CreateRoomRequest {
+  string leader_username = 1;
+  bool is_public = 2;
+  optional string password = 3;
+}
+
+message CreateRoomResponse {
+  common.RoomCode code = 1;
+  ServerIdentifier server = 2;
+}
+
+message ServerIdentifier {
+  string address = 2;
+}
+
+service RegistryLobbyService {
+  rpc CreateRoom(CreateRoomRequest) returns (CreateRoomResponse);
+}

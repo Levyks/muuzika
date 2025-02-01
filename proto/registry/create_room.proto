@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package muuzika.registry;
+
+import "common.proto";
+import "google/protobuf/empty.proto";
+import "registry/common.proto";
+
+message CreateRoomInServerRequest {
+  common.RoomCode code = 1;
+  string leader_username = 2;
+  bool is_public = 3;
+  optional string password = 4;
+}
+
+message CreateRoomInServerError {
+  oneof error {
+    google.protobuf.Empty internal_error = 1;
+    RoomRegistryDefinition room_already_exists = 2;
+  }
+}
