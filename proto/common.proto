@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package muuzika.common;
+package com.muuzika.common;
 
 message RoomCode {
   uint32 code = 1;
