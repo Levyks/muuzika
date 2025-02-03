@@ -39,13 +39,15 @@ class CodeGenerator(seed: Option[Long], initialPower: Int, capacityThresholdToRe
     collection
   }
 
+  def collectionsCount: Int = collections.length
+
   def returnCode(code: RoomCode): Unit = this.synchronized {
     val power = math.max(math.log10(code.code).toInt, initialPower)
     val idx = collections.indexWhere(_.power == power)
     if (idx != -1) {
       collections(idx).pushBack(code.code)
       if (collections(idx).available > capacityThresholdToRemove) {
-        collections.dropRightInPlace(collections.length - idx)
+        collections.dropRightInPlace(collections.length - idx - 1)
       }
     }
   }
