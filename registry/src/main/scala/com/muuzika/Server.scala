@@ -1,18 +1,16 @@
 package com.muuzika
 
-import com.muuzika.common.RoomCode
-import com.muuzika.Room
-import com.muuzika.registry.{CreateRoomInServerRequest, CreateRoomRequest, RegistryToServerMessage, RegistryToServerRequest, RegistryToServerResponse, ServerId, ServerIdentifier, ServerToRegistryMessage, ServerToRegistryResponse, ServerToRegistrySuccess}
-import org.apache.pekko.actor.typed.{ActorRef, ActorSystem}
-
-import java.util.concurrent.ConcurrentHashMap
-import scala.concurrent.{Future, Promise}
 import com.muuzika.ProtoExtensions.*
+import com.muuzika.common.RoomCode
+import com.muuzika.registry.*
+import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.stream.scaladsl.SourceQueueWithComplete
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Future, Promise}
 
 class Server(system: ActorSystem[?], val id: ServerId, val callsign: String, val address: String, val queue: SourceQueueWithComplete[RegistryToServerMessage]) {
   private implicit val sys: ActorSystem[?] = system
@@ -36,36 +34,8 @@ class Server(system: ActorSystem[?], val id: ServerId, val callsign: String, val
     }
   }
 
-  def createRoom(code: RoomCode, request: CreateRoomRequest): Future[Unit] = {
-    val (requestId, future) = createRequestFuture()
-    
-    val serverRequest = CreateRoomInServerRequest(
-      code = Some(code),
-      leaderUsername = request.leaderUsername,
-      isPublic = request.isPublic,
-      password = request.password
-    )
-
-    for {
-      _ <- queue.offer(RegistryToServerRequest.Request.CreateRoom(serverRequest).pack(requestId))
-      _ <- future
-    } yield ()
-  }
-
-  def shutdown(): Unit = {
-    queue.complete()
-    promises.values().forEach(_.failure(new Exception("Server shutdown")))
-  }
-
-  private def createRequestFuture(): (Long, Future[ServerToRegistrySuccess.Success]) = {
-    val requestId = requestIdCounter.incrementAndGet()
-    val promise = Promise[ServerToRegistrySuccess.Success]()
-    promises.put(requestId, promise)
-    (requestId, promise.future)
-  }
-
   private def handleResponse(requestId: Long, response: ServerToRegistryResponse): Unit = {
-    import ServerToRegistryResponse.Response._
+    import ServerToRegistryResponse.Response.*
 
     val promise = promises.remove(requestId)
     if (promise != null) {
@@ -87,11 +57,42 @@ class Server(system: ActorSystem[?], val id: ServerId, val callsign: String, val
 
   }
 
+  def createRoom(code: RoomCode, request: CreateRoomRequest): Future[Unit] = {
+    val (requestId, future) = createRequestFuture()
+
+    val serverRequest = CreateRoomInServerRequest(
+      code = Some(code),
+      leaderUsername = request.leaderUsername,
+      isPublic = request.isPublic,
+      password = request.password
+    )
+
+    for {
+      _ <- queue.offer(RegistryToServerRequest.Request.CreateRoom(serverRequest).pack(requestId))
+      _ <- future
+    } yield ()
+  }
+
+  private def createRequestFuture(): (Long, Future[ServerToRegistrySuccess.Success]) = {
+    val requestId = requestIdCounter.incrementAndGet()
+    val promise = Promise[ServerToRegistrySuccess.Success]()
+    promises.put(requestId, promise)
+    (requestId, promise.future)
+  }
+
+  def shutdown(): Unit = {
+    queue.complete()
+    promises.values().forEach(_.failure(new Exception("Server shutdown")))
+  }
+
 }
 
 sealed trait ServerOutbound {}
+
 object ServerOutbound {
   case class Send(message: com.muuzika.registry.RegistryToServerMessage) extends ServerOutbound
+
   case class Complete() extends ServerOutbound
+
   case class Fail(ex: Throwable) extends ServerOutbound
 }
