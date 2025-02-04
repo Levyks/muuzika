@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package com.muuzika.registry;
+package muuzika.registry;
 
 import "google/protobuf/empty.proto";
 
