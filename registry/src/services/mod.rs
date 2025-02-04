@@ -1,18 +1,21 @@
-use crate::services::registry_service::create_registry_service_server;
-use crate::state::State;
+use crate::codes::RoomCodeGenerator;
+use crate::registry::Registry;
+use crate::services::registry_lobby_service::RegistryLobbyServiceImpl;
+use crate::services::registry_service::RegistryServiceImpl;
 use std::sync::Arc;
 use tonic::transport::server::Router;
 use tonic::transport::Server;
 
 mod registry_lobby_service;
-pub mod registry_service;
+mod registry_service;
 
-pub trait RegistryGrpcServices {
-    fn add_registry_services(&mut self, state: &Arc<State>) -> Router;
+pub trait RegistryGrpcServices<G: RoomCodeGenerator + Send + 'static> {
+    fn add_registry_services(&mut self, registry: &Arc<Registry<G>>) -> Router;
 }
 
-impl RegistryGrpcServices for Server {
-    fn add_registry_services(&mut self, state: &Arc<State>) -> Router {
-        self.add_service(create_registry_service_server(state))
+impl<G: RoomCodeGenerator + Send + 'static> RegistryGrpcServices<G> for Server {
+    fn add_registry_services(&mut self, registry: &Arc<Registry<G>>) -> Router {
+        self.add_service(RegistryServiceImpl::server(registry))
+            .add_service(RegistryLobbyServiceImpl::server(registry))
     }
 }

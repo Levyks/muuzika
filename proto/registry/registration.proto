@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package muuzika.registry;
+package com.muuzika.registry;
 
 import "common.proto";
 
@@ -8,11 +8,10 @@ import "google/protobuf/empty.proto";
 import "registry/common.proto";
 
 message ServerRegistrationRequest {
-  string callsign = 1;
-  string address = 2;
+  string address = 1;
+  string description = 2;
   repeated RoomRegistryDefinition rooms = 3;
   optional uint32 capacity = 4;
-  optional string type = 5;
 }
 
 message ServerRegistrationResponse {

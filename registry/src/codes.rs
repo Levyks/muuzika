@@ -1,9 +1,9 @@
 use crate::proto::common::RoomCode;
 use rand::prelude::{SliceRandom, StdRng};
-use rand::{thread_rng, SeedableRng};
+use rand::{rng, SeedableRng};
 use std::collections::VecDeque;
 
-pub struct RoomCodeGenerator {
+pub struct RoomCodeGeneratorImpl {
     initial_power: u32,
     rng: StdRng,
     collections: Vec<RoomCodeCollection>,
@@ -43,45 +43,15 @@ impl RoomCodeCollection {
     }
 }
 
-impl RoomCodeGenerator {
-    pub fn new(seed: Option<u64>, initial_power: u32, capacity_threshold_to_remove: usize) -> Self {
-        let mut s = Self {
-            initial_power,
-            rng: seed
-                .map(|seed| StdRng::seed_from_u64(seed))
-                .unwrap_or_else(|| StdRng::from_rng(thread_rng()).unwrap()),
-            collections: Vec::with_capacity(1),
-            capacity_threshold_to_remove,
-        };
+pub trait RoomCodeGenerator {
+    fn new_code(&mut self) -> RoomCode;
+    fn return_code(&mut self, code: RoomCode);
+    fn has_available_code(&self) -> bool;
+    fn create_next_collection(&mut self) -> &mut RoomCodeCollection;
+}
 
-        let initial_collection = RoomCodeCollection::new(&mut s.rng, 1, initial_power);
-        s.collections.push(initial_collection);
-
-        s
-    }
-
-    pub fn has_available_code(&self) -> bool {
-        self.collections.iter().any(|c| !c.is_empty())
-    }
-
-    pub fn create_next_collection(&mut self) -> &mut RoomCodeCollection {
-        let power = if let Some(last) = self.collections.last() {
-            last.power + 1
-        } else {
-            self.initial_power
-        };
-        let collection = RoomCodeCollection::new(&mut self.rng, 10u32.pow(power), power);
-        self.collections.push(collection);
-        self.collections.last_mut().unwrap()
-    }
-
-    fn generate_random_codes(&mut self, min: u32, max: u32) -> VecDeque<u32> {
-        let mut codes = (min..max).collect::<Vec<u32>>();
-        codes.shuffle(&mut self.rng);
-        codes.into()
-    }
-
-    pub fn get_code(&mut self) -> RoomCode {
+impl RoomCodeGenerator for RoomCodeGeneratorImpl {
+    fn new_code(&mut self) -> RoomCode {
         let collection =
             if let Some(collection) = self.collections.iter_mut().find(|c| !c.is_empty()) {
                 collection
@@ -92,7 +62,7 @@ impl RoomCodeGenerator {
         collection.pop_front().unwrap().into()
     }
 
-    pub fn return_code(&mut self, code: RoomCode) {
+    fn return_code(&mut self, code: RoomCode) {
         let power = code.code.ilog10().max(self.initial_power);
 
         let idx = if let Some((idx, _)) = self
@@ -112,6 +82,46 @@ impl RoomCodeGenerator {
             self.collections.truncate(idx + 1);
         }
     }
+
+
+    fn has_available_code(&self) -> bool {
+        self.collections.iter().any(|c| !c.is_empty())
+    }
+
+    fn create_next_collection(&mut self) -> &mut RoomCodeCollection {
+        let power = if let Some(last) = self.collections.last() {
+            last.power + 1
+        } else {
+            self.initial_power
+        };
+        let collection = RoomCodeCollection::new(&mut self.rng, 10u32.pow(power), power);
+        self.collections.push(collection);
+        self.collections.last_mut().unwrap()
+    }
+}
+
+impl RoomCodeGeneratorImpl {
+    pub fn new(seed: Option<u64>, initial_power: u32, capacity_threshold_to_remove: usize) -> Self {
+        let mut s = Self {
+            initial_power,
+            rng: seed
+                .map(StdRng::seed_from_u64)
+                .unwrap_or_else(|| StdRng::from_rng(&mut rng())),
+            collections: Vec::with_capacity(1),
+            capacity_threshold_to_remove,
+        };
+
+        let initial_collection = RoomCodeCollection::new(&mut s.rng, 1, initial_power);
+        s.collections.push(initial_collection);
+
+        s
+    }
+
+    fn generate_random_codes(&mut self, min: u32, max: u32) -> VecDeque<u32> {
+        let mut codes = (min..max).collect::<Vec<u32>>();
+        codes.shuffle(&mut self.rng);
+        codes.into()
+    }
 }
 
 impl From<u32> for RoomCode {
@@ -128,38 +138,39 @@ impl From<RoomCode> for u32 {
 
 #[cfg(test)]
 mod tests {
+    use super::{RoomCodeGenerator, RoomCodeGeneratorImpl};
     use crate::proto::common::RoomCode;
 
     static SEED: Option<u64> = Some(42);
 
     #[test]
     fn test_generates_a_code_on_correct_range() {
-        let mut generator = super::RoomCodeGenerator::new(SEED, 3, 0);
-        let code = generator.get_code();
+        let mut generator = RoomCodeGeneratorImpl::new(SEED, 3, 0);
+        let code = generator.new_code();
         assert!(code.code < 10000);
     }
 
     #[test]
     fn test_code_returned_can_be_reused() {
-        let mut generator = super::RoomCodeGenerator::new(SEED, 0, 0);
-        let code = generator.get_code();
+        let mut generator = RoomCodeGeneratorImpl::new(SEED, 0, 0);
+        let code = generator.new_code();
         for _ in 0..8 {
-            generator.get_code();
+            generator.new_code();
         }
         generator.return_code(code);
-        let new_code = generator.get_code();
+        let new_code = generator.new_code();
         assert_eq!(code.code, new_code.code);
     }
 
     #[test]
     fn test_code_gets_bigger_when_exhausted() {
-        let mut generator = super::RoomCodeGenerator::new(SEED, 0, 0);
+        let mut generator = RoomCodeGeneratorImpl::new(SEED, 0, 0);
         for _ in 0..9 {
-            let code = generator.get_code();
+            let code = generator.new_code();
             assert!(code.code < 10);
         }
         assert_eq!(generator.collections.len(), 1);
-        let code = generator.get_code();
+        let code = generator.new_code();
         assert_eq!(generator.collections.len(), 2);
         assert!(code.code >= 10);
         assert!(code.code < 100);
@@ -167,34 +178,34 @@ mod tests {
 
     #[test]
     fn test_generates_a_code_on_the_smallest_available_collection() {
-        let mut generator = super::RoomCodeGenerator::new(SEED, 0, 0);
+        let mut generator = RoomCodeGeneratorImpl::new(SEED, 0, 0);
         for _ in 0..10 {
-            generator.get_code();
+            generator.new_code();
         }
-        let code_1 = generator.get_code();
-        let code_2 = generator.get_code();
+        let code_1 = generator.new_code();
+        let code_2 = generator.new_code();
 
         generator.return_code(code_1);
         generator.return_code(RoomCode { code: 7 });
         generator.return_code(code_2);
 
-        let code = generator.get_code();
+        let code = generator.new_code();
         assert_eq!(code.code, 7);
     }
 
     #[test]
     fn test_collection_is_removed_when_capacity_threshold_is_reached() {
-        let mut generator = super::RoomCodeGenerator::new(SEED, 1, 20);
+        let mut generator = RoomCodeGeneratorImpl::new(SEED, 1, 20);
 
         // exhausting first collection (1-99)
         for _ in 1..=99 {
-            generator.get_code();
+            generator.new_code();
         }
 
         assert_eq!(generator.collections.len(), 1);
 
         // forcing next collection to be created
-        let code_2nd_collection = generator.get_code();
+        let code_2nd_collection = generator.new_code();
         assert_eq!(generator.collections.len(), 2);
 
         // return 20 codes of the first collection
@@ -217,19 +228,19 @@ mod tests {
 
     #[test]
     fn test_has_available_code() {
-        let mut generator = super::RoomCodeGenerator::new(SEED, 0, 0);
+        let mut generator = RoomCodeGeneratorImpl::new(SEED, 0, 0);
         assert!(generator.has_available_code());
         for _ in 0..9 {
-            generator.get_code();
+            generator.new_code();
         }
         assert!(!generator.has_available_code());
     }
 
     #[test]
     fn test_create_next_collection() {
-        let mut generator = super::RoomCodeGenerator::new(SEED, 0, 0);
+        let mut generator = RoomCodeGeneratorImpl::new(SEED, 0, 0);
         for _ in 0..9 {
-            generator.get_code();
+            generator.new_code();
         }
         assert!(!generator.has_available_code());
         assert_eq!(generator.collections.len(), 1);

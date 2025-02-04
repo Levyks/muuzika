@@ -1,115 +1,93 @@
+use crate::codes::RoomCodeGenerator;
+use crate::packing::RegistryToServerMessagePack;
 use crate::proto::registry::registry_service_server::{RegistryService, RegistryServiceServer};
 use crate::proto::registry::{
-    registry_to_server_error, registry_to_server_message, registry_to_server_response,
-    registry_to_server_success, server_to_registry_error, server_to_registry_message,
-    server_to_registry_request, server_to_registry_response, RegistryToServerError,
-    RegistryToServerMessage, RegistryToServerResponse, RegistryToServerSuccess, ServerId,
-    ServerRegistrationRequest, ServerRegistrationResponse, ServerToRegistryMessage,
-    ServerToRegistryRequest,
+    registry_to_server_success, server_to_registry_message,
+    server_to_registry_request,
+    RegistryToServerMessage,
+    ServerRegistrationRequest, ServerToRegistryMessage,
 };
-use crate::server::{create_and_insert, Server};
-use crate::state::State;
-use std::sync::atomic::Ordering;
+use crate::registry::Registry;
+use crate::utils::NotifiableReceiverStream;
+use nanoid::nanoid;
 use std::sync::Arc;
-use tokio::sync::mpsc::Sender;
-use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
 use tonic::codegen::tokio_stream::StreamExt;
 use tonic::{Request, Response, Status, Streaming};
 
-struct RegistryServiceImpl {
-    state: Arc<State>,
+pub struct RegistryServiceImpl<G: RoomCodeGenerator + Send + 'static> {
+    registry: Arc<Registry<G>>,
+    registration_timeout: std::time::Duration,
 }
 
 #[tonic::async_trait]
-impl RegistryService for RegistryServiceImpl {
-    type RegisterServerStream = ReceiverStream<Result<RegistryToServerMessage, Status>>;
+impl<G: RoomCodeGenerator + Send + 'static> RegistryService for RegistryServiceImpl<G> {
+    type RegisterServerStream = NotifiableReceiverStream<Result<RegistryToServerMessage, Status>>;
 
     async fn register_server(
         &self,
         request: Request<Streaming<ServerToRegistryMessage>>,
     ) -> Result<Response<Self::RegisterServerStream>, Status> {
+        let log_id = nanoid!();
+
+        let remote_addr = request.remote_addr().map(|a| a.to_string()).unwrap_or_default();
+        log::debug!("[{}] Started registration request from address {}", log_id, remote_addr);
+
+        let mut stream = request.into_inner();
+        let (request_id, registration) = self.wait_for_registration(&mut stream).await
+            .map_err(|e| {
+                log::warn!("[{}] Failed to get registration data: {:?}", log_id, e);
+                e
+            })?;
+
+        log::debug!("[{}] Received registration data: {:?}", log_id, registration);
+
         let (tx, rx) = tokio::sync::mpsc::channel::<Result<RegistryToServerMessage, Status>>(1);
-        tokio::spawn(register_server(
-            self.state.clone(),
-            request.into_inner(),
-            tx,
-        ));
-        Ok(Response::new(ReceiverStream::new(rx)))
-    }
-}
 
-pub fn create_registry_service_server(
-    state: &Arc<State>,
-) -> RegistryServiceServer<impl RegistryService> {
-    RegistryServiceServer::new(RegistryServiceImpl {
-        state: state.clone(),
-    })
-}
+        let (server_id, response, runner) = self.registry.register_server(registration, tx.clone(), self.registry.clone()).await;
+        log::debug!("[{}] Registered server as {}", log_id, runner);
 
-async fn register_server(
-    state: Arc<State>,
-    mut stream: Streaming<ServerToRegistryMessage>,
-    tx: Sender<Result<RegistryToServerMessage, Status>>,
-) -> () {
-    // TODO: from env
-    let registration_timeout = std::time::Duration::from_secs(5);
+        let message = registry_to_server_success::Success::RegistrationResponse(response).pack(Some(request_id));
+        tx.send(Ok(message)).await.map_err(|_| Status::internal("Failed to send response"))?;
 
-    let message =
-        match tokio::time::timeout(registration_timeout, wait_for_first_message(&mut stream)).await
-        {
-            Ok(Ok(message)) => message,
-            Ok(Err(e)) => {
-                log::debug!("Failed to receive first message: {:?}", e);
-                return;
+        tokio::spawn(async move {
+            log::debug!("Starting input stream handler loop for server {}", runner);
+            while let Some(message) = stream.next().await {
+                match message {
+                    Ok(message) => runner.handle_message(message).await,
+                    Err(e) => log::warn!("Got error from input stream for server {}: {:?}", server_id, e),
+                }
             }
-            Err(_) => {
-                log::debug!("First message timeout");
-                send_or_log(&tx, Err(Status::deadline_exceeded("Registration timeout"))).await;
-                return;
-            }
-        };
+            log::debug!("Input stream for server {} ended", runner);
+            runner.remove_self();
+        });
 
-    let (request_id, registration) = if let Some(x) = extract_registration(message) {
-        x
-    } else {
-        log::debug!("First message should be a registration request");
-        send_or_log(
-            &tx,
-            Err(Status::invalid_argument(
-                "First message should be a registration request",
-            )),
-        )
-        .await;
-        return;
-    };
-
-    let (server, response) = create_and_insert(state.clone(), registration, tx.clone()).await;
-
-    if send_or_log(
-        &tx,
-        Ok(RegistryToServerMessage {
-            request_id: Some(request_id),
-            message: Some(pack_success(
-                registry_to_server_success::Success::RegistrationResponse(response),
-            )),
-        }),
-    )
-    .await
-    {
-        server.handle_stream(&mut stream).await;
-        server.handle_stream(&mut stream).await;
+        let registry = self.registry.clone();
+        Ok(Response::new(NotifiableReceiverStream::new(rx, move || {
+            log::debug!("Output stream for server {} closed", server_id);
+            registry.remove_server(server_id);
+        })))
     }
 }
 
-async fn wait_for_first_message(
-    stream: &mut Streaming<ServerToRegistryMessage>,
-) -> anyhow::Result<ServerToRegistryMessage> {
-    loop {
-        if let Some(message) = stream.next().await? {
-            return Ok(message);
-        }
+
+impl<G: RoomCodeGenerator + Send + 'static> RegistryServiceImpl<G> {
+    pub fn server(registry: &Arc<Registry<G>>) -> RegistryServiceServer<impl RegistryService> {
+        RegistryServiceServer::new(Self {
+            registry: registry.clone(),
+            // TODO: from env/config
+            registration_timeout: std::time::Duration::from_secs(5),
+        })
+    }
+
+    async fn wait_for_registration(&self, stream: &mut Streaming<ServerToRegistryMessage>) -> Result<(u64, ServerRegistrationRequest), Status> {
+        tokio::time::timeout(self.registration_timeout, stream.next()).await
+            .map_err(|_| Status::deadline_exceeded("Registration request timeout"))?
+            .ok_or_else(|| Status::cancelled("Input stream closed"))?
+            .map(extract_registration)?
+            .ok_or_else(|| Status::invalid_argument("First message should be a valid registration request"))
     }
 }
+
 
 fn extract_registration(
     message: ServerToRegistryMessage,
@@ -125,44 +103,4 @@ fn extract_registration(
     };
 
     Some((message.request_id?, registration))
-}
-
-async fn wait_for_registration(
-    stream: &mut Streaming<ServerToRegistryMessage>,
-) -> anyhow::Result<(u64, ServerRegistrationRequest)> {
-    let message = wait_for_first_message(stream).await?;
-    extract_registration(message)
-        .ok_or_else(|| anyhow::anyhow!("First message should be a registration request"))
-}
-
-async fn send_or_log(
-    tx: &Sender<Result<RegistryToServerMessage, Status>>,
-    message: Result<RegistryToServerMessage, Status>,
-) -> bool {
-    if let Err(e) = tx.send(message).await {
-        log::debug!("Failed to send message: {:?}", e);
-        false
-    } else {
-        true
-    }
-}
-
-fn pack_success(
-    response: registry_to_server_success::Success,
-) -> registry_to_server_message::Message {
-    registry_to_server_message::Message::Response(RegistryToServerResponse {
-        response: Some(registry_to_server_response::Response::Success(
-            RegistryToServerSuccess {
-                success: Some(response),
-            },
-        )),
-    })
-}
-
-fn pack_error(error: registry_to_server_error::Error) -> registry_to_server_message::Message {
-    registry_to_server_message::Message::Response(RegistryToServerResponse {
-        response: Some(registry_to_server_response::Response::Error(
-            RegistryToServerError { error: Some(error) },
-        )),
-    })
 }

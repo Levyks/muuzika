@@ -1,18 +1,18 @@
+use crate::codes::RoomCodeGenerator;
 use crate::proto::registry::registry_lobby_service_server::{
     RegistryLobbyService, RegistryLobbyServiceServer,
 };
 use crate::proto::registry::{CreateRoomRequest, CreateRoomResponse};
-use crate::state::State;
+use crate::registry::Registry;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
-// impl conversion from RegistryError to tonic::Status
-struct RegistryLobbyServiceImpl {
-    state: Arc<State>,
+pub struct RegistryLobbyServiceImpl<G: RoomCodeGenerator + Send + 'static> {
+    registry: Arc<Registry<G>>,
 }
 
 #[tonic::async_trait]
-impl RegistryLobbyService for RegistryLobbyServiceImpl {
+impl<G: RoomCodeGenerator + Send + 'static> RegistryLobbyService for RegistryLobbyServiceImpl<G> {
     async fn create_room(
         &self,
         request: Request<CreateRoomRequest>,
@@ -21,10 +21,10 @@ impl RegistryLobbyService for RegistryLobbyServiceImpl {
     }
 }
 
-pub fn create_registry_lobby_service_server(
-    state: &Arc<State>,
-) -> RegistryLobbyServiceServer<impl RegistryLobbyService> {
-    RegistryLobbyServiceServer::new(RegistryLobbyServiceImpl {
-        state: state.clone(),
-    })
+impl<G: RoomCodeGenerator + Send + 'static> RegistryLobbyServiceImpl<G> {
+    pub fn server(registry: &Arc<Registry<G>>) -> RegistryLobbyServiceServer<impl RegistryLobbyService> {
+        RegistryLobbyServiceServer::new(Self {
+            registry: registry.clone(),
+        })
+    }
 }

@@ -1,6 +1,6 @@
-use muuzika_registry::db::init_db;
+use muuzika_registry::codes::RoomCodeGeneratorImpl;
+use muuzika_registry::registry::Registry;
 use muuzika_registry::services::RegistryGrpcServices;
-use muuzika_registry::state::State;
 use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -18,12 +18,12 @@ async fn main() -> anyhow::Result<()> {
         .parse::<SocketAddr>()
         .expect("LISTEN_ADDRESS is not a valid address");
 
-    let db = init_db().await?;
-    let state = Arc::new(State { db });
+    let generator = RoomCodeGeneratorImpl::new(None, 3, 200);
+    let registry = Arc::new(Registry::new(generator));
 
     log::info!("Registry server listening on {}", listen_address);
     Server::builder()
-        .add_registry_services(&state)
+        .add_registry_services(&registry)
         .serve(listen_address)
         .await?;
 

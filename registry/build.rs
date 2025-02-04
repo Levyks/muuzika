@@ -3,7 +3,6 @@ use glob::glob;
 const PROTO_FOLDER: &str = "../proto";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("cargo:rerun-if-changed=migrations");
     println!("cargo:rerun-if-changed={}", PROTO_FOLDER);
 
     let paths = glob(format!("{}/**/*.proto", PROTO_FOLDER).as_str())?
