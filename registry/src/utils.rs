@@ -34,6 +34,13 @@ impl<T> Drop for NotifiableReceiverStream<T> {
     }
 }
 
+// TODO: modify this macro to somehow allow "configuration" about success and error having "oneof" variants or not (currently assumes that error has, but success doesn't)
+/**
+* Assumes that `$response_variant` has a field named `response` that is an `Option`
+* of an enum containing `$success_variant` and `$error_variant`
+*
+* Assumes that `$error_variant` has a field named `error` that is an `Option` of an error type
+*/
 #[macro_export]
 macro_rules! handle_response_complete {
     ($rx:expr, $response_variant:path, $success_variant:path, $error_variant:path) => {
@@ -55,6 +62,12 @@ macro_rules! handle_response_complete {
     };
 }
 
+/**
+* Assumes that `$response_variant` has a field named `response` that is an `Option`
+* of an enum containing `$success_variant` and `$error_variant`
+*
+* Assumes that `$error_variant` has a field named `error` that is an `Option` of an error type
+*/
 #[macro_export]
 macro_rules! send_request {
     ($self:ident, $request:expr, $response_variant:path, $success_variant:path, $error_variant:path) => {{
