@@ -1,12 +1,7 @@
 use crate::codes::RoomCodeGenerator;
 use crate::packing::RegistryToServerMessagePack;
 use crate::proto::registry::registry_service_server::{RegistryService, RegistryServiceServer};
-use crate::proto::registry::{
-    registry_to_server_success, server_to_registry_message,
-    server_to_registry_request,
-    RegistryToServerMessage,
-    ServerRegistrationRequest, ServerToRegistryMessage,
-};
+use crate::proto::registry::{registry_to_server_response, server_registration_response, server_to_registry_message, server_to_registry_request, RegistryToServerMessage, ServerRegistrationRequest, ServerRegistrationResponse, ServerToRegistryMessage};
 use crate::registry::Registry;
 use crate::utils::NotifiableReceiverStream;
 use nanoid::nanoid;
@@ -46,10 +41,14 @@ impl<G: RoomCodeGenerator + Send + 'static> RegistryService for RegistryServiceI
         let (server_id, response, runner) = self.registry.register_server(registration, tx.clone(), self.registry.clone()).await;
         log::debug!("[{}] Registered server as {}", log_id, runner);
 
-        let message = registry_to_server_success::Success::RegistrationResponse(response).pack(Some(request_id));
+        let message = registry_to_server_response::Response::ServerRegistration(ServerRegistrationResponse {
+            response: Some(server_registration_response::Response::Success(response)),
+        }).pack(Some(request_id));
+
         tx.send(Ok(message)).await.map_err(|_| Status::internal("Failed to send response"))?;
 
         tokio::spawn(async move {
+            // TODO: extract to runner method?!?
             log::debug!("Starting input stream handler loop for server {}", runner);
             while let Some(message) = stream.next().await {
                 match message {
@@ -63,7 +62,7 @@ impl<G: RoomCodeGenerator + Send + 'static> RegistryService for RegistryServiceI
 
         let registry = self.registry.clone();
         Ok(Response::new(NotifiableReceiverStream::new(rx, move || {
-            log::debug!("Output stream for server {} closed", server_id);
+            log::debug!("[{}] Output stream for server {} closed", log_id, server_id);
             registry.remove_server(server_id);
         })))
     }

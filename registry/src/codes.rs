@@ -79,6 +79,9 @@ impl RoomCodeGenerator for RoomCodeGeneratorImpl {
         self.collections[idx].push_back(code.into());
 
         if self.collections[idx].available() > self.capacity_threshold_to_remove {
+            if self.collections.len() > idx + 1 {
+                log::warn!("Removing last {} collection(s)", self.collections.len() - idx - 1);
+            }
             self.collections.truncate(idx + 1);
         }
     }
@@ -94,6 +97,7 @@ impl RoomCodeGenerator for RoomCodeGeneratorImpl {
         } else {
             self.initial_power
         };
+        log::warn!("Creating new collection with power {}", power);
         let collection = RoomCodeCollection::new(&mut self.rng, 10u32.pow(power), power);
         self.collections.push(collection);
         self.collections.last_mut().unwrap()

@@ -18,19 +18,14 @@ message ServerToRegistryRequest {
   }
 }
 
-message ServerToRegistrySuccess {
-  oneof success {
-    google.protobuf.Empty create_room = 1;
+message ServerToRegistryResponse {
+  oneof response {
+    CreateRoomInServerResponse create_room = 1;
+    google.protobuf.Empty temp = 2;
   }
 }
 
-message ServerToRegistryError {
-  oneof error {
-    CreateRoomInServerError create_room = 1;
-  }
-}
-
-// REGISTRY -> SERVER
+//  REGISTRY -> SERVER
 
 message RegistryToServerRequest {
   oneof request {
@@ -38,28 +33,15 @@ message RegistryToServerRequest {
   }
 }
 
-message RegistryToServerSuccess {
-  oneof success {
-    ServerRegistrationResponse registration_response = 1;
-    SyncRoomResponse sync_room = 2;
-  }
-}
-
-message RegistryToServerError {
-  oneof error {
-    ServerRegistrationError registration_error = 1;
-    SyncRoomError sync_room = 2;
+message RegistryToServerResponse {
+  oneof response {
+    google.protobuf.Empty internal_error = 1;
+    ServerRegistrationResponse server_registration = 2;
+    SyncRoomResponse sync_room = 3;
   }
 }
 
 //
-
-message ServerToRegistryResponse {
-  oneof response {
-    ServerToRegistrySuccess success = 1;
-    ServerToRegistryError error = 2;
-  }
-}
 
 message ServerToRegistryMessage {
   optional uint64 request_id = 1;
@@ -69,12 +51,6 @@ message ServerToRegistryMessage {
   }
 }
 
-message RegistryToServerResponse {
-  oneof response {
-    RegistryToServerSuccess success = 1;
-    RegistryToServerError error = 2;
-  }
-}
 
 message RegistryToServerMessage {
   optional uint64 request_id = 1;

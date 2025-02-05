@@ -17,7 +17,8 @@ impl<G: RoomCodeGenerator + Send + 'static> RegistryLobbyService for RegistryLob
         &self,
         request: Request<CreateRoomRequest>,
     ) -> Result<Response<CreateRoomResponse>, Status> {
-        todo!()
+        let response = self.registry.create_room(request.into_inner()).await?;
+        Ok(Response::new(response))
     }
 }
 

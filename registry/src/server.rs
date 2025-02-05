@@ -1,26 +1,30 @@
 use crate::codes::RoomCodeGenerator;
+use crate::errors::{RequestError, RequestResult};
 use crate::proto::common::RoomCode;
-use crate::proto::registry::{server_to_registry_message, RegistryToServerMessage, ServerId, ServerToRegistryMessage, ServerToRegistryRequest, ServerToRegistryResponse};
+use crate::proto::registry::{create_room_in_server_error, create_room_in_server_response, registry_to_server_request, server_to_registry_message, server_to_registry_response, CreateRoomInServerRequest, CreateRoomRequest, RegistryToServerMessage, ServerId, ServerToRegistryMessage, ServerToRegistryRequest, ServerToRegistryResponse};
 use crate::registry::Registry;
-use dashmap::DashMap;
-use std::collections::HashSet;
+use crate::{handle_response_complete, send_request};
+use dashmap::{DashMap, DashSet};
 use std::fmt::Display;
 use std::hash::Hash;
+use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::oneshot;
 use tonic::Status;
 
 pub struct Server<G: RoomCodeGenerator + Send + 'static> {
+    pub(crate) id: ServerId,
     runner: Arc<ServerRunner<G>>,
-    address: String,
+    pub(crate) address: String,
     capacity: Option<u32>,
-    pub(crate) rooms: HashSet<RoomCode>,
+    pub(crate) rooms: DashSet<RoomCode>,
 }
 
 impl<G: RoomCodeGenerator + Send + 'static> Server<G> {
-    pub fn new(runner: Arc<ServerRunner<G>>, address: String, capacity: Option<u32>, rooms: HashSet<RoomCode>) -> Self {
+    pub fn new(id: ServerId, runner: Arc<ServerRunner<G>>, address: String, capacity: Option<u32>, rooms: DashSet<RoomCode>) -> Self {
         Self {
+            id,
             runner,
             address,
             capacity,
@@ -28,11 +32,11 @@ impl<G: RoomCodeGenerator + Send + 'static> Server<G> {
         }
     }
 
-    pub fn add_room(&mut self, room: RoomCode) -> bool {
+    pub fn add_room(&self, room: RoomCode) -> bool {
         self.rooms.insert(room)
     }
 
-    pub fn remove_room(&mut self, room: &RoomCode) -> bool {
+    pub fn remove_room(&self, room: &RoomCode) -> Option<RoomCode> {
         self.rooms.remove(room)
     }
 
@@ -43,14 +47,19 @@ impl<G: RoomCodeGenerator + Send + 'static> Server<G> {
     pub fn room_count(&self) -> usize {
         self.rooms.len()
     }
+
+    pub async fn create_room(&self, code: RoomCode, request: CreateRoomRequest) -> RequestResult<(), create_room_in_server_error::Error> {
+        self.runner.create_room(code, request).await
+    }
 }
 
 pub struct ServerRunner<G: RoomCodeGenerator + Send + 'static> {
     pub id: ServerId,
     description: String,
     pending: DashMap<u64, oneshot::Sender<ServerToRegistryResponse>>,
-    tx: Sender<Result<RegistryToServerMessage, Status>>,
     registry: Arc<Registry<G>>,
+    request_id_counter: AtomicU64,
+    tx: Sender<Result<RegistryToServerMessage, Status>>,
 }
 
 impl<G: RoomCodeGenerator + Send + 'static> ServerRunner<G> {
@@ -59,8 +68,9 @@ impl<G: RoomCodeGenerator + Send + 'static> ServerRunner<G> {
             id,
             description,
             tx,
-            pending: DashMap::new(),
             registry,
+            pending: DashMap::new(),
+            request_id_counter: AtomicU64::new(0),
         }
     }
 
@@ -101,11 +111,39 @@ impl<G: RoomCodeGenerator + Send + 'static> ServerRunner<G> {
     fn handle_request(&self, request_id: Option<u64>, response: ServerToRegistryRequest) {
         log::debug!("Server {} sent a request: {:?}", self, response);
     }
+
+    pub fn add_pending(&self) -> (u64, oneshot::Receiver<ServerToRegistryResponse>) {
+        let (tx, rx) = oneshot::channel();
+        let request_id = self.request_id_counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        self.pending.insert(request_id, tx);
+        (request_id, rx)
+    }
+
+    pub async fn create_room(&self, code: RoomCode, request: CreateRoomRequest) -> RequestResult<(), create_room_in_server_error::Error> {
+        send_request!(
+            self,
+            registry_to_server_request::Request::CreateRoom(
+                CreateRoomInServerRequest {
+                    code: Some(code),
+                    request: Some(request),
+                }
+            ),
+            server_to_registry_response::Response::CreateRoom,
+            create_room_in_server_response::Response::Success,
+            create_room_in_server_response::Response::Error
+        )
+    }
 }
 
 impl<G: RoomCodeGenerator + Send + 'static> Display for ServerRunner<G> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} ({})", self.id, self.description)
+    }
+}
+
+impl<G: RoomCodeGenerator + Send + 'static> Display for Server<G> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.runner.fmt(f)
     }
 }
 

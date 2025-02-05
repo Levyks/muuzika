@@ -5,6 +5,7 @@ pub mod server;
 pub mod room;
 mod packing;
 mod utils;
+mod errors;
 
 pub mod proto {
     pub mod common {

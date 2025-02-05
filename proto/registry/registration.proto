@@ -15,6 +15,13 @@ message ServerRegistrationRequest {
 }
 
 message ServerRegistrationResponse {
+  oneof response {
+    ServerRegistrationSuccess success = 1;
+    ServerRegistrationError error = 2;
+  }
+}
+
+message ServerRegistrationSuccess {
   ServerId server_id = 1;
   repeated RoomCodeChange conflicts = 2;
 }

@@ -1,5 +1,6 @@
 use crate::proto::common::RoomCode;
 use crate::proto::registry::ServerId;
+use std::fmt::Display;
 use std::hash::Hash;
 
 pub struct Room {
@@ -22,3 +23,9 @@ impl Hash for RoomCode {
     }
 }
 impl Eq for RoomCode {}
+
+impl Display for RoomCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.code)
+    }
+}

@@ -33,3 +33,54 @@ impl<T> Drop for NotifiableReceiverStream<T> {
         }
     }
 }
+
+#[macro_export]
+macro_rules! handle_response_complete {
+    ($rx:expr, $response_variant:path, $success_variant:path, $error_variant:path) => {
+        match $rx.await {
+            Ok(response) => match response.response {
+                Some($response_variant(response)) => match response.response {
+                    Some($success_variant(success)) => Ok(success),
+                    Some($error_variant(error)) => match error.error {
+                        Some(error) => Err(error.into()),
+                        None => Err(RequestError::EmptyResponse),
+                    },
+                    None => Err(RequestError::EmptyResponse),
+                },
+                Some(_) => Err(RequestError::UnexpectedResponse),
+                None => Err(RequestError::EmptyResponse),
+            },
+            Err(_) => Err(RequestError::FailedToReceive),
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! send_request {
+    ($self:ident, $request:expr, $response_variant:path, $success_variant:path, $error_variant:path) => {{
+        let (request_id, rx) = $self.add_pending();
+
+        let message = $crate::packing::RegistryToServerMessagePack::pack($request, Some(request_id));
+
+        $self.tx.send(Ok(message)).await.map_err(|_| RequestError::FailedToSend)?;
+
+        handle_response_complete!(rx, $response_variant, $success_variant, $error_variant)
+    }};
+}
+
+#[macro_export]
+macro_rules! handle_response {
+    ($rx:expr, $expected_response_variant:path) => {
+        match $rx.await {
+            Ok(response) => match response.response {
+                Some($expected_response_variant(response)) => match response.response {
+                    Some(response) => Ok(response),
+                    None => Err(RequestError::EmptyResponse),
+                },
+                Some(_) => Err(RequestError::UnexpectedResponse),
+                None => Err(RequestError::EmptyResponse),
+            },
+            Err(_) => Err(RequestError::FailedToReceive),
+        }
+    };
+}
