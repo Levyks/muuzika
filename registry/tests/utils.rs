@@ -19,11 +19,11 @@ async fn setup_test_server_base(options: Option<Options>, codes: Option<Vec<u32>
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
     tokio::spawn(async move {
-        serve_with_shutdown_and_codes(addr, options, shutdown_rx, codes).await
+        serve_with_shutdown_and_codes(listener, options, shutdown_rx, codes).await;
     });
-    let addr = format!("http://{}", addr);
-    wait_for_server_ready(&addr).await.unwrap();
-    (shutdown_tx, addr.try_into().unwrap())
+    let endpoint: Endpoint = format!("http://{}", addr).try_into().unwrap();
+    wait_for_server_ready(&endpoint).await.unwrap();
+    (shutdown_tx, endpoint)
 }
 
 pub async fn setup_test_server_with_options(options: Options) -> (tokio::sync::oneshot::Sender<()>, Endpoint) {
@@ -42,13 +42,10 @@ pub async fn setup_test_server() -> (tokio::sync::oneshot::Sender<()>, Endpoint)
     setup_test_server_base(None, None).await
 }
 
-async fn wait_for_server_ready(addr: &str) -> Result<Channel, tonic::transport::Error> {
+async fn wait_for_server_ready(endpoint: &Endpoint) -> Result<Channel, tonic::transport::Error> {
     let mut attempts = 0;
     loop {
-        match Channel::from_shared(addr.clone())
-            .unwrap()
-            .connect()
-            .await
+        match endpoint.connect().await
         {
             Ok(channel) => return Ok(channel),
             Err(e) => {
