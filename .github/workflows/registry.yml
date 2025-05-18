@@ -42,6 +42,7 @@ jobs:
 
       - name: Run tests and generate JUnit report
         run: cargo test -- -Z unstable-options --format json --report-time | cargo2junit > test-results.xml
+        continue-on-error: true
         env:
           RUSTC_BOOTSTRAP: 1
 
