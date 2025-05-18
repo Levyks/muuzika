@@ -45,7 +45,7 @@ pub async fn setup_test_server() -> (tokio::sync::oneshot::Sender<()>, Endpoint)
 async fn wait_for_server_ready(addr: &str) -> Result<Channel, tonic::transport::Error> {
     let mut attempts = 0;
     loop {
-        match Channel::from_shared(addr)
+        match Channel::from_shared(addr.clone())
             .unwrap()
             .connect()
             .await
