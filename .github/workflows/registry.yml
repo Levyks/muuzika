@@ -48,6 +48,13 @@ jobs:
         env:
           RUSTC_BOOTSTRAP: 1
 
+      - name: Check if test results file exists
+        run: |
+          if [ ! -f test-results.xml ]; then
+            echo "Error: Test results file 'test-results.xml' not found. Likely a compilation or test execution failure."
+            exit 1
+          fi
+
       - name: Show test results in GitHub UI
         uses: dorny/test-reporter@v1
         with:
