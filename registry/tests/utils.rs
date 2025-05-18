@@ -2,11 +2,9 @@ use muuzika_registry::proto::registry::registry_service_client::RegistryServiceC
 use muuzika_registry::proto::registry::{registry_to_server_message, registry_to_server_response, server_to_registry_message, server_to_registry_request, server_to_registry_response, RegistryToServerMessage, ServerRegistrationRequest, ServerRegistrationSuccess, ServerToRegistryMessage, ServerToRegistryRequest, ServerToRegistryResponse};
 use muuzika_registry::{serve_with_shutdown_and_codes, Options};
 use prost::Message;
-use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
-use tokio::time::sleep;
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
 use tonic::transport::{Channel, Endpoint};
 use tonic::{Request, Status};
@@ -21,9 +19,7 @@ async fn setup_test_server_base(options: Option<Options>, codes: Option<Vec<u32>
     tokio::spawn(async move {
         serve_with_shutdown_and_codes(listener, options, shutdown_rx, codes).await;
     });
-    let endpoint: Endpoint = format!("http://{}", addr).try_into().unwrap();
-    wait_for_server_ready(&endpoint).await.unwrap();
-    (shutdown_tx, endpoint)
+    (shutdown_tx, format!("http://{}", addr).try_into().unwrap())
 }
 
 pub async fn setup_test_server_with_options(options: Options) -> (tokio::sync::oneshot::Sender<()>, Endpoint) {
@@ -40,24 +36,6 @@ pub async fn setup_test_server_with_options_and_codes(options: Options, codes: V
 
 pub async fn setup_test_server() -> (tokio::sync::oneshot::Sender<()>, Endpoint) {
     setup_test_server_base(None, None).await
-}
-
-async fn wait_for_server_ready(endpoint: &Endpoint) -> Result<Channel, tonic::transport::Error> {
-    let mut attempts = 0;
-    loop {
-        match endpoint.connect().await
-        {
-            Ok(channel) => return Ok(channel),
-            Err(e) => {
-                println!("Failed to connect to server on attempt {attempts}: {e:?}");
-                if attempts >= 10 {
-                    return Err(e);
-                }
-                attempts += 1;
-                sleep(Duration::from_millis(50)).await;
-            }
-        }
-    }
 }
 
 pub fn make_request() -> (Sender<ServerToRegistryMessage>, Request<ReceiverStream<ServerToRegistryMessage>>,) {
