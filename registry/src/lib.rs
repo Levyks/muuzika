@@ -5,8 +5,8 @@ mod generator;
 mod registry;
 mod server;
 mod utils;
-mod room;
 mod messages;
+mod errors;
 
 pub mod proto {
     pub mod common {

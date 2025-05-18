@@ -30,7 +30,7 @@ async fn test_registers_successfully() {
             load: 0.0,
             accepting_new_rooms: true,
         }),
-    }.pack(Some(registration_request_id));
+    }.pack(registration_request_id);
     tx.send(registration_message).await.unwrap();
 
     let mut response_stream = client
@@ -109,7 +109,7 @@ async fn test_gets_invalid_argument_error_before_timeout() {
             load: 0.0,
             accepting_new_rooms: true,
         }
-    ).pack(Some(42));
+    ).pack(42);
 
     tx.send(message).await.unwrap();
 
@@ -134,7 +134,7 @@ async fn test_registers_2_servers_successfully() {
         .await
         .expect("Failed to connect to server");
 
-    let (first_tx, _) = register_server(&mut client, ServerRegistrationRequest {
+    let (_, first_tx, _) = register_server(&mut client, ServerRegistrationRequest {
         id: Some(ServerId {
             server_id: 84
         }),
@@ -174,7 +174,7 @@ async fn test_returns_id_already_exists_error() {
         server_id: 84
     };
 
-    let (first_tx, _) = register_server(&mut client, ServerRegistrationRequest {
+    let (_, first_tx, _) = register_server(&mut client, ServerRegistrationRequest {
         id: Some(server_id),
         address: "".to_string(),
         rooms: vec![],
@@ -223,7 +223,7 @@ async fn used_ids_get_reassigned() {
         .await
         .expect("Failed to connect to server");
 
-    let (first_tx, _) = register_server(&mut client, ServerRegistrationRequest {
+    let (_, first_tx, _) = register_server(&mut client, ServerRegistrationRequest {
         id: Some(ServerId { server_id: 1 }),
         address: "".to_string(),
         rooms: vec![RoomCode { code: 2602 }],
@@ -233,7 +233,7 @@ async fn used_ids_get_reassigned() {
         }),
     }).await.expect("Failed to register first server");
 
-    let (_, registration) = register_server(&mut client, ServerRegistrationRequest {
+    let (registration, _, _) = register_server(&mut client, ServerRegistrationRequest {
         id: Some(ServerId { server_id: 2 }),
         address: "".to_string(),
         rooms: vec![RoomCode { code: 2602 }, RoomCode { code: 1107 }],

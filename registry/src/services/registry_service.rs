@@ -1,16 +1,16 @@
 use crate::messages::registration::ExtractedServerRegistrationRequest;
 use crate::options::Options;
 use crate::proto::registry::registry_service_server::{RegistryService, RegistryServiceServer};
-use crate::proto::registry::{registry_to_server_response, server_to_registry_message, server_to_registry_request, RegistryToServerMessage, ServerToRegistryMessage};
+use crate::proto::registry::{create_room_error, registry_to_server_response, server_registration_error, server_to_registry_message, server_to_registry_request, CreateRoomError, RegistryToServerMessage, ServerRegistrationError, ServerToRegistryMessage};
 use crate::registry::Registry;
 use crate::server::{Server, ServerRunner};
-use crate::utils::packing::RegistryToServerMessagePack;
+use crate::utils::packing::{into_any_bytes, RegistryToServerMessagePack};
 use crate::utils::stream::NotifiableReceiverStream;
 use nanoid::nanoid;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use tonic::codegen::tokio_stream::{Stream, StreamExt};
-use tonic::{Request, Response, Status, Streaming};
+use tonic::{Code, Request, Response, Status, Streaming};
 
 pub struct RegistryServiceImpl {
     registry: Arc<RwLock<Registry>>,
@@ -96,8 +96,7 @@ impl RegistryService for RegistryServiceImpl {
         let mut registry = self.registry.write().await;
         let response = registry.register_server(server)?;
 
-        let message = registry_to_server_response::Response::RegistrationSuccess(response)
-            .pack(Some(registration.request_id));
+        let message = registry_to_server_response::Response::RegistrationSuccess(response).pack(registration.request_id);
 
         tx.send(Ok(message)).await.map_err(|_| {
             log::warn!("[{log_id}] Failed to send registration response");
@@ -123,5 +122,24 @@ impl RegistryService for RegistryServiceImpl {
         });
 
         Ok(Response::new(stream))
+    }
+}
+
+impl From<ServerRegistrationError> for Status {
+    fn from(error: ServerRegistrationError) -> Self {
+        use server_registration_error::Error;
+        let (code, message) = match error.error {
+            Some(error) => match error {
+                Error::IdAlreadyExists(_) => (Code::AlreadyExists, "Server ID already exists"),
+                Error::InternalError(_) => (Code::Internal, "Internal error"),
+            },
+            None => (Code::Unknown, "Unknown error"),
+        };
+
+        Status::with_details(
+            code,
+            message,
+            into_any_bytes(error, "type.googleapis.com/com.muuzika.registry.ServerRegistrationError".into()),
+        )
     }
 }

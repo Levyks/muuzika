@@ -46,3 +46,9 @@ message JoinRoomError {
     google.protobuf.Empty user_already_in_room = 5;
   }
 }
+
+message GetServerInfoError {
+  oneof error {
+    google.protobuf.Empty server_not_found = 2;
+  }
+}

@@ -1,22 +1,25 @@
+use crate::errors::{RequestError, RequestResult};
+use crate::handle_response_with_oneof_error;
+use crate::proto::common::RoomCode;
+use crate::proto::registry::{create_room_in_server_error, create_room_in_server_response, registry_to_server_request, server_to_registry_message, server_to_registry_response, CreateRoomInServerRequest, CreateRoomRequest, JoinRoomResponse, RegistryToServerMessage, RoomToken, ServerId, ServerInfo, ServerLoadInfo, ServerToRegistryMessage, ServerToRegistryRequest, ServerToRegistryResponse};
+use crate::registry::Registry;
+use crate::utils::packing::RegistryToServerMessagePack;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 use std::hash::Hash;
-use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
+use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{oneshot, Mutex, RwLock};
-use tonic::Status;
 use tonic::codegen::tokio_stream::{Stream, StreamExt};
-use crate::proto::common::RoomCode;
-use crate::proto::registry::{server_to_registry_message, RegistryToServerMessage, ServerId, ServerLoadInfo, ServerToRegistryMessage, ServerToRegistryRequest, ServerToRegistryResponse};
-use crate::registry::Registry;
+use tonic::Status;
 
 pub struct Server {
     pub id: ServerId,
     pub rooms: HashSet<RoomCode>,
-    address: String,
-    load_info: ServerLoadInfo,
-    runner: Arc<ServerRunner>
+    pub(crate) address: String,
+    pub(crate) load_info: ServerLoadInfo,
+    pub(crate) runner: Arc<ServerRunner>,
 }
 
 impl Server {
@@ -26,7 +29,14 @@ impl Server {
             address,
             load_info,
             rooms,
-            runner
+            runner,
+        }
+    }
+
+    pub fn info(&self) -> ServerInfo {
+        ServerInfo {
+            id: Some(self.id.clone()),
+            address: self.address.clone(),
         }
     }
 }
@@ -46,7 +56,7 @@ impl ServerRunner {
             pending: Arc::new(Mutex::new(HashMap::new())),
             request_id_counter: AtomicU64::new(0),
             tx,
-            registry
+            registry,
         }
     }
 
@@ -74,7 +84,7 @@ impl ServerRunner {
             log::warn!("[{self}] Got response without request ID");
             return;
         };
-        
+
         let tx = if let Some(tx) = self.pending.lock().await.remove(&request_id) {
             tx
         } else {
@@ -90,10 +100,10 @@ impl ServerRunner {
     fn handle_request(&self, request_id: Option<u64>, request: ServerToRegistryRequest) {
         log::debug!("[{self}] Got request: {request:?}");
     }
-    
+
     pub async fn run<S>(&self, mut stream: S)
     where
-        S: Stream<Item = ServerToRegistryMessage> + Send + Unpin+ 'static
+        S: Stream<Item=ServerToRegistryMessage> + Send + Unpin + 'static,
     {
         log::debug!("[{self}] Starting input stream handler loop");
         while let Some(message) = stream.next().await {
@@ -105,6 +115,25 @@ impl ServerRunner {
 
     pub async fn remove_self(&self) {
         self.registry.write().await.remove_server(&self.id);
+    }
+
+    pub async fn create_room(&self, room_code: RoomCode, request: CreateRoomRequest) -> RequestResult<RoomToken, create_room_in_server_error::Error> {
+        let (request_id, rx) = self.add_pending().await;
+
+        let message = registry_to_server_request::Request::CreateRoom(CreateRoomInServerRequest {
+            code: Some(room_code),
+            request: Some(request),
+        }).pack(request_id);
+
+        log::debug!("[{self}] Sending create room request: {message:?}");
+        self.tx.send(Ok(message)).await.map_err(|_| RequestError::FailedToSend)?;
+
+        handle_response_with_oneof_error!(
+            rx.await,
+            server_to_registry_response::Response::CreateRoom,
+            create_room_in_server_response::Response::Success,
+            create_room_in_server_response::Response::Error
+        )
     }
 }
 

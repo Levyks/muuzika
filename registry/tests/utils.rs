@@ -1,5 +1,5 @@
 use muuzika_registry::proto::registry::registry_service_client::RegistryServiceClient;
-use muuzika_registry::proto::registry::{registry_to_server_message, registry_to_server_response, server_to_registry_message, server_to_registry_request, server_to_registry_response, RegistryToServerMessage, ServerRegistrationRequest, ServerRegistrationSuccess, ServerToRegistryMessage, ServerToRegistryRequest, ServerToRegistryResponse};
+use muuzika_registry::proto::registry::{create_room_in_server_response, registry_to_server_message, registry_to_server_request, registry_to_server_response, server_to_registry_message, server_to_registry_request, server_to_registry_response, CreateRoomInServerResponse, RegistryToServerMessage, RoomToken, ServerRegistrationRequest, ServerRegistrationSuccess, ServerToRegistryMessage, ServerToRegistryRequest, ServerToRegistryResponse};
 use muuzika_registry::{serve_with_shutdown_and_codes, Options};
 use prost::Message;
 use tokio::net::TcpListener;
@@ -7,7 +7,7 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tonic::codegen::tokio_stream::wrappers::ReceiverStream;
 use tonic::transport::{Channel, Endpoint};
-use tonic::{Request, Status};
+use tonic::{Request, Status, Streaming};
 
 async fn setup_test_server_base(options: Option<Options>, codes: Option<Vec<u32>>) -> (tokio::sync::oneshot::Sender<()>, Endpoint) {
     let options = options.unwrap_or_else(|| Options {
@@ -47,11 +47,11 @@ pub fn make_request() -> (Sender<ServerToRegistryMessage>, Request<ReceiverStrea
 pub async fn register_server(
     client: &mut RegistryServiceClient<Channel>,
     registration: ServerRegistrationRequest,
-) -> Result<(Sender<ServerToRegistryMessage>, ServerRegistrationSuccess), Status> {
+) -> Result<(ServerRegistrationSuccess, Sender<ServerToRegistryMessage>, Streaming<RegistryToServerMessage>), Status> {
     let (request_tx, request) = make_request();
 
     let registration_request_id = 42u64;
-    request_tx.send(registration.pack(Some(registration_request_id))).await.unwrap();
+    request_tx.send(registration.pack_opt(Some(registration_request_id))).await.unwrap();
 
     let mut response_stream = client.register_server(request)
         .await?
@@ -65,7 +65,42 @@ pub async fn register_server(
         }
     };
 
-    Ok((request_tx, assert_message_is_registration_success(registration_message)))
+    Ok((assert_message_is_registration_success(registration_message), request_tx, response_stream))
+}
+
+pub async fn register_server_and_start_mock_thread(
+    client: &mut RegistryServiceClient<Channel>,
+    registration: ServerRegistrationRequest,
+) -> Result<(ServerRegistrationSuccess, Sender<ServerToRegistryMessage>), Status> {
+    let (registration, request_tx, response_stream) = register_server(client, registration).await?;
+
+    let thread_tx = request_tx.clone();
+    tokio::spawn(async move {
+        mock_server(thread_tx, response_stream).await;
+    });
+
+    Ok((registration, request_tx))
+}
+
+async fn mock_server(
+    tx: Sender<ServerToRegistryMessage>,
+    mut response_stream: Streaming<RegistryToServerMessage>,
+) {
+    while let Some(message) = response_stream.message().await.unwrap() {
+        if let Some(registry_to_server_message::Message::Request(request)) = message.message {
+            match request.request {
+                Some(registry_to_server_request::Request::CreateRoom(_)) => {
+                    let response = server_to_registry_response::Response::CreateRoom(CreateRoomInServerResponse {
+                        response: Some(create_room_in_server_response::Response::Success(RoomToken {
+                            token: "test_token".to_string(),
+                        })),
+                    });
+                    tx.send(response.pack_opt(message.request_id)).await.unwrap();
+                }
+                _ => {}
+            }
+        }
+    }
 }
 
 pub fn assert_message_is_registration_success(
@@ -81,11 +116,12 @@ pub fn assert_message_is_registration_success(
 }
 
 pub trait ServerToRegistryMessagePack {
-    fn pack(self, request_id: Option<u64>) -> ServerToRegistryMessage;
+    fn pack_opt(self, request_id: Option<u64>) -> ServerToRegistryMessage;
+    fn pack(self, request_id: u64) -> ServerToRegistryMessage;
 }
 
 impl ServerToRegistryMessagePack for server_to_registry_request::Request {
-    fn pack(self, request_id: Option<u64>) -> ServerToRegistryMessage {
+    fn pack_opt(self, request_id: Option<u64>) -> ServerToRegistryMessage {
         ServerToRegistryMessage {
             request_id,
             message: Some(server_to_registry_message::Message::Request(ServerToRegistryRequest {
@@ -93,10 +129,14 @@ impl ServerToRegistryMessagePack for server_to_registry_request::Request {
             })),
         }
     }
+
+    fn pack(self, request_id: u64) -> ServerToRegistryMessage {
+        self.pack_opt(Some(request_id))
+    }
 }
 
 impl ServerToRegistryMessagePack for server_to_registry_response::Response {
-    fn pack(self, request_id: Option<u64>) -> ServerToRegistryMessage {
+    fn pack_opt(self, request_id: Option<u64>) -> ServerToRegistryMessage {
         ServerToRegistryMessage {
             request_id,
             message: Some(server_to_registry_message::Message::Response(ServerToRegistryResponse {
@@ -104,11 +144,19 @@ impl ServerToRegistryMessagePack for server_to_registry_response::Response {
             })),
         }
     }
+
+    fn pack(self, request_id: u64) -> ServerToRegistryMessage {
+        self.pack_opt(Some(request_id))
+    }
 }
 
 impl ServerToRegistryMessagePack for ServerRegistrationRequest {
-    fn pack(self, request_id: Option<u64>) -> ServerToRegistryMessage {
-        server_to_registry_request::Request::Registration(self).pack(request_id)
+    fn pack_opt(self, request_id: Option<u64>) -> ServerToRegistryMessage {
+        server_to_registry_request::Request::Registration(self).pack_opt(request_id)
+    }
+
+    fn pack(self, request_id: u64) -> ServerToRegistryMessage {
+        self.pack_opt(Some(request_id))
     }
 }
 
