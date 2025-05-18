@@ -21,9 +21,9 @@ async fn setup_test_server_base(options: Option<Options>, codes: Option<Vec<u32>
     tokio::spawn(async move {
         serve_with_shutdown_and_codes(addr, options, shutdown_rx, codes).await
     });
-    let endpoint: Endpoint = format!("http://{}", addr).try_into().unwrap();
-    wait_for_server_ready(&endpoint).await.unwrap();
-    (shutdown_tx, endpoint)
+    let addr = format!("http://{}", addr);
+    wait_for_server_ready(&addr).await.unwrap();
+    (shutdown_tx, addr.try_into().unwrap())
 }
 
 pub async fn setup_test_server_with_options(options: Options) -> (tokio::sync::oneshot::Sender<()>, Endpoint) {
@@ -42,13 +42,17 @@ pub async fn setup_test_server() -> (tokio::sync::oneshot::Sender<()>, Endpoint)
     setup_test_server_base(None, None).await
 }
 
-async fn wait_for_server_ready(endpoint: &Endpoint) -> Result<Channel, tonic::transport::Error> {
+async fn wait_for_server_ready(addr: &str) -> Result<Channel, tonic::transport::Error> {
     let mut attempts = 0;
     loop {
-        match endpoint.connect().await
+        match Channel::from_shared(addr)
+            .unwrap()
+            .connect()
+            .await
         {
             Ok(channel) => return Ok(channel),
             Err(e) => {
+                println!("Failed to connect to server on attempt {attempts}: {e:?}");
                 if attempts >= 10 {
                     return Err(e);
                 }
