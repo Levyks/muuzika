@@ -2,7 +2,13 @@ name: Registry Tests
 
 on:
   push:
+    paths:
+      - 'registry/**'
+      - 'proto/**'
   pull_request:
+    paths:
+      - 'registry/**'
+      - 'proto/**'
 
 permissions:
   contents: read
