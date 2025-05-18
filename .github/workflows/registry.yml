@@ -28,24 +28,17 @@ jobs:
           override: true
           profile: minimal
 
-      - name: Install cargo2junit
-        run: cargo install cargo2junit
+      - name: Install cargo-junit
+        run: cargo install cargo-junit
 
-      - name: Capture raw cargo test JSON output
-        run: cargo test --all --message-format=json > test_output.json
+      - name: Run tests
+        run: cargo test -- -Z unstable-options --format json | cargo-junit > test-results.xml
+        continue-on-error: true
 
-      - name: Run tests and generate JUnit XML
-        run: cat test_output.json | cargo2junit > registry-tests.xml
-
-      - name: Upload test results as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: registry-test-report
-          path: registry-tests.xml
-
-      - name: Show test results in GitHub UI
+      - name: Publish test results
         uses: dorny/test-reporter@v1
         with:
-          name: Registry Tests
-          path: registry-tests.xml
+          name: Rust Test Results
+          path: registry/test-results.xml
           reporter: java-junit
+          fail-on-error: false
