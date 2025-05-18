@@ -1,0 +1,45 @@
+name: Registry Tests
+
+on:
+  push:
+    branches: [ '**' ]
+  pull_request:
+    branches: [ '**' ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: registry
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+
+      - name: Install cargo2junit
+        run: cargo install cargo2junit
+
+      - name: Run tests and generate JUnit XML
+        run: cargo test --all --message-format=json | cargo2junit > rust-tests.xml
+
+      - name: Upload test results as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-test-report
+          path: rust-tests.xml
+
+      - name: Show test results in GitHub UI
+        uses: dorny/test-reporter@v1
+        with:
+          name: Rust Tests
+          path: rust-tests.xml
+          reporter: java-junit
