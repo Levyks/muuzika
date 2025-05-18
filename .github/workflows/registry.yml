@@ -2,10 +2,7 @@ name: Registry Tests
 
 on:
   push:
-    branches: [ '**' ]
   pull_request:
-    branches: [ '**' ]
-
 
 permissions:
   contents: read
@@ -41,9 +38,6 @@ jobs:
         run: cargo test -- -Z unstable-options --format json --report-time | cargo2junit > test-results.xml
         env:
           RUSTC_BOOTSTRAP: 1
-
-      - name: Check test-results.xml
-        run: cat test-results.xml
 
       - name: Show test results in GitHub UI
         uses: dorny/test-reporter@v1
