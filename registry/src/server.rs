@@ -93,14 +93,11 @@ impl ServerRunner {
     
     pub async fn run<S>(&self, mut stream: S)
     where
-        S: Stream<Item = Result<ServerToRegistryMessage, Status>> + Send + Unpin+ 'static
+        S: Stream<Item = ServerToRegistryMessage> + Send + Unpin+ 'static
     {
         log::debug!("[{self}] Starting input stream handler loop");
         while let Some(message) = stream.next().await {
-            match message {
-                Ok(message) => self.handle_message(message).await,
-                Err(e) => log::warn!("[{self}] Got error from input stream : {e:?}"),
-            }
+            self.handle_message(message).await
         }
         log::debug!("[{self}] Input stream ended");
         self.remove_self().await;

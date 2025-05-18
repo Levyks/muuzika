@@ -8,7 +8,7 @@ mod utils;
 mod room;
 mod messages;
 
-mod proto {
+pub mod proto {
     pub mod common {
         tonic::include_proto!("com.muuzika.common");
     }
@@ -17,5 +17,5 @@ mod proto {
     }
 }
 
-pub use init::serve;
+pub use init::{serve, serve_with_shutdown_and_codes};
 pub use options::Options;

@@ -38,7 +38,7 @@ message RegistryToServerRequest {
 message RegistryToServerResponse {
   oneof response {
     google.protobuf.Empty internal_error = 1;
-    ServerRegistrationResponse server_registration = 2;
+    ServerRegistrationSuccess registration_success = 2;
   }
 }
 

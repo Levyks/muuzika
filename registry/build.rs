@@ -10,7 +10,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{:?}", paths);
 
     tonic_build::configure()
-        .build_client(false)
+        .build_client(true)
         .build_server(true)
         .compile_protos(&paths, &[PROTO_FOLDER])?;
 
