@@ -5,23 +5,24 @@ package com.muuzika.registry;
 import "google/protobuf/empty.proto";
 
 import "registry/common.proto";
+import "registry/lobby.proto";
 import "registry/registration.proto";
-import "registry/create_room.proto";
-import "registry/sync_room.proto";
+import "registry/server_room.proto";
 
 // SERVER -> REGISTRY
 
 message ServerToRegistryRequest {
   oneof request {
     ServerRegistrationRequest registration = 1;
-    RoomRegistryDefinition sync_room = 2;
+    ServerLoadInfo update_load_info = 2;
   }
 }
 
 message ServerToRegistryResponse {
   oneof response {
-    CreateRoomInServerResponse create_room = 1;
-    google.protobuf.Empty temp = 2;
+    google.protobuf.Empty internal_error = 1;
+    CreateRoomInServerResponse create_room = 2;
+    JoinRoomInServerResponse join_room = 3;
   }
 }
 
@@ -30,6 +31,7 @@ message ServerToRegistryResponse {
 message RegistryToServerRequest {
   oneof request {
     CreateRoomInServerRequest create_room = 1;
+    JoinRoomRequest join_room = 2;
   }
 }
 
@@ -37,7 +39,6 @@ message RegistryToServerResponse {
   oneof response {
     google.protobuf.Empty internal_error = 1;
     ServerRegistrationResponse server_registration = 2;
-    SyncRoomResponse sync_room = 3;
   }
 }
 

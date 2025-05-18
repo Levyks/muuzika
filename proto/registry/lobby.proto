@@ -3,22 +3,46 @@ syntax = "proto3";
 package com.muuzika.registry;
 
 import "common.proto";
+import "registry/common.proto";
 
-message CreateRoomRequest {
-  string leader_username = 1;
-  bool is_public = 2;
-  optional string password = 3;
-}
-
-message CreateRoomResponse {
-  common.RoomCode code = 1;
-  ServerIdentifier server = 2;
-}
-
-message ServerIdentifier {
-  string address = 2;
-}
+import "google/protobuf/empty.proto";
 
 service RegistryLobbyService {
-  rpc CreateRoom(CreateRoomRequest) returns (CreateRoomResponse);
+  rpc CreateRoom(CreateRoomRequest) returns (JoinRoomResponse);
+  rpc JoinRoom(JoinRoomRequest) returns (JoinRoomResponse);
+  rpc GetServerInfo(ServerId) returns (ServerInfo);
+}
+
+message CreateRoomRequest {
+  string username = 1;
+  optional string password = 2;
+}
+
+message JoinRoomRequest {
+  common.RoomCode code = 1;
+  CreateRoomRequest data = 2;
+}
+
+message JoinRoomResponse {
+  common.RoomCode code = 1;
+  ServerInfo server = 2;
+  RoomToken token = 3;
+}
+
+message CreateRoomError {
+  oneof error {
+    google.protobuf.Empty internal_error = 1;
+    google.protobuf.Empty out_of_codes = 2;
+    google.protobuf.Empty no_server_available = 3;
+  }
+}
+
+message JoinRoomError {
+  oneof error {
+    google.protobuf.Empty internal_error = 1;
+    google.protobuf.Empty room_not_found = 2;
+    google.protobuf.Empty room_full = 3;
+    google.protobuf.Empty wrong_password = 4;
+    google.protobuf.Empty user_already_in_room = 5;
+  }
 }

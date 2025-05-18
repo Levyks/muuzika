@@ -11,7 +11,7 @@ pub struct RoomCodeGeneratorImpl {
 }
 
 #[derive(Debug)]
-pub struct RoomCodeCollection {
+pub(crate) struct RoomCodeCollection {
     power: u32,
     codes: VecDeque<u32>,
 }
@@ -43,7 +43,7 @@ impl RoomCodeCollection {
     }
 }
 
-pub trait RoomCodeGenerator {
+pub(crate) trait RoomCodeGenerator {
     fn new_code(&mut self) -> RoomCode;
     fn return_code(&mut self, code: RoomCode);
     fn has_available_code(&self) -> bool;
@@ -119,12 +119,6 @@ impl RoomCodeGeneratorImpl {
         s.collections.push(initial_collection);
 
         s
-    }
-
-    fn generate_random_codes(&mut self, min: u32, max: u32) -> VecDeque<u32> {
-        let mut codes = (min..max).collect::<Vec<u32>>();
-        codes.shuffle(&mut self.rng);
-        codes.into()
     }
 }
 

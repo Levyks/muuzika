@@ -1,31 +1,30 @@
-use muuzika_registry::codes::RoomCodeGeneratorImpl;
-use muuzika_registry::registry::Registry;
-use muuzika_registry::services::RegistryGrpcServices;
 use std::env;
 use std::net::SocketAddr;
-use std::sync::Arc;
-use tonic::transport::Server;
+use log::LevelFilter;
+use pretty_env_logger::formatted_timed_builder;
+use muuzika_registry::{serve, Options};
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    if env::var_os("RUST_LOG").is_none() {
-        env::set_var("RUST_LOG", "info");
-    }
-    pretty_env_logger::init_timed();
+async fn main() {
+    init_logger();
 
     let listen_address = env::var("LISTEN_ADDRESS")
-        .unwrap_or("0.0.0.0:50051".to_string())
+        .unwrap_or_else(|_| "0.0.0.0:50051".to_string())
         .parse::<SocketAddr>()
         .expect("LISTEN_ADDRESS is not a valid address");
 
-    let generator = RoomCodeGeneratorImpl::new(None, 3, 200);
-    let registry = Arc::new(Registry::new(generator));
+    let options = Options::from_env();
+    serve(listen_address, options).await;
+}
 
-    log::info!("Registry server listening on {}", listen_address);
-    Server::builder()
-        .add_registry_services(&registry)
-        .serve(listen_address)
-        .await?;
+fn init_logger() {
+    let mut builder = formatted_timed_builder();
 
-    Ok(())
+    if let Ok(rust_log) = env::var("RUST_LOG") {
+        builder.parse_filters(&rust_log);
+    } else {
+        builder.filter(None, LevelFilter::Info);
+    }
+
+    builder.init();
 }

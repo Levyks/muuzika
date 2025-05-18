@@ -4,14 +4,15 @@ package com.muuzika.registry;
 
 import "common.proto";
 
-message RoomRegistryDefinition {
-  common.RoomCode code = 1;
-  string leader_username = 2;
-  uint32 num_players = 3;
-  bool is_public = 4;
-  bool has_password = 5;
-}
-
 message ServerId {
   uint32 server_id = 1;
+}
+
+message ServerInfo {
+  ServerId id = 1;
+  string address = 2;
+}
+
+message RoomToken {
+  string token = 1;
 }

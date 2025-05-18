@@ -8,10 +8,10 @@ import "google/protobuf/empty.proto";
 import "registry/common.proto";
 
 message ServerRegistrationRequest {
-  string address = 1;
-  string description = 2;
-  repeated RoomRegistryDefinition rooms = 3;
-  optional uint32 capacity = 4;
+  ServerId id = 1;
+  string address = 2;
+  repeated common.RoomCode rooms = 3;
+  ServerLoadInfo load_info = 4;
 }
 
 message ServerRegistrationResponse {
@@ -29,10 +29,16 @@ message ServerRegistrationSuccess {
 message ServerRegistrationError {
   oneof error {
     google.protobuf.Empty internal_error = 1;
+    google.protobuf.Empty id_already_exists = 2;
   }
 }
 
 message RoomCodeChange {
   common.RoomCode before = 1;
   common.RoomCode after = 2;
+}
+
+message ServerLoadInfo {
+  bool accepting_new_rooms = 1;
+  double load = 2;
 }

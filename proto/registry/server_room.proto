@@ -14,7 +14,7 @@ message CreateRoomInServerRequest {
 
 message CreateRoomInServerResponse {
   oneof response {
-    google.protobuf.Empty success = 1;
+    RoomToken success = 1;
     CreateRoomInServerError error = 2;
   }
 }
@@ -22,6 +22,13 @@ message CreateRoomInServerResponse {
 message CreateRoomInServerError {
   oneof error {
     google.protobuf.Empty internal_error = 1;
-    RoomRegistryDefinition room_already_exists = 2;
+    google.protobuf.Empty room_already_exists = 2;
+  }
+}
+
+message JoinRoomInServerResponse {
+  oneof response {
+    RoomToken success = 1;
+    JoinRoomError error = 2;
   }
 }
