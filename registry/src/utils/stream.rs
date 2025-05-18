@@ -12,10 +12,6 @@ impl<T> NotifiableReceiverStream<T> {
     pub fn new(recv: Receiver<T>, on_close: impl FnOnce() + Send + 'static) -> Self {
         Self { inner: recv, on_close: Some(Box::new(on_close)) }
     }
-
-    pub fn close(&mut self) {
-        self.inner.close();
-    }
 }
 
 impl<T> Stream for NotifiableReceiverStream<T> {

@@ -21,7 +21,7 @@ impl Registry {
     }
 
     pub fn register_server(&mut self, mut server: Server) -> Result<ServerRegistrationSuccess, ServerRegistrationError> {
-        if (self.servers.contains_key(&server.id)) {
+        if self.servers.contains_key(&server.id) {
             return Err(ServerRegistrationError {
                 error: Some(server_registration_error::Error::IdAlreadyExists(()))
             });

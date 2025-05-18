@@ -25,6 +25,10 @@ impl RoomCodeCollection {
             codes: codes.into(),
         }
     }
+    
+    pub fn new_from_vec(power: u32, codes: Vec<u32>) -> Self {
+        Self { power, codes: codes.into() }
+    }
 
     fn is_empty(&self) -> bool {
         self.codes.is_empty()
@@ -105,20 +109,42 @@ impl RoomCodeGenerator for RoomCodeGeneratorImpl {
 }
 
 impl RoomCodeGeneratorImpl {
-    pub fn new(seed: Option<u64>, initial_power: u32, capacity_threshold_to_remove: usize) -> Self {
-        let mut s = Self {
-            initial_power,
-            rng: seed
-                .map(StdRng::seed_from_u64)
-                .unwrap_or_else(|| StdRng::from_rng(&mut rng())),
-            collections: Vec::with_capacity(1),
+    pub fn new_with_rng_and_collection(
+        rng: StdRng,
+        collection: RoomCodeCollection,
+        capacity_threshold_to_remove: usize,
+    ) -> Self {
+        Self {
+            initial_power: collection.power,
+            rng,
+            collections: vec![collection],
             capacity_threshold_to_remove,
-        };
+        }
+    }
+    
+    pub fn new_with_collection(
+        collection: RoomCodeCollection,
+        capacity_threshold_to_remove: usize,
+    ) -> Self {
+        Self::new_with_rng_and_collection(
+            StdRng::from_rng(&mut rng()),
+            collection,
+            capacity_threshold_to_remove
+        )
+    }
+    
+    pub fn new(seed: Option<u64>, initial_power: u32, capacity_threshold_to_remove: usize) -> Self {
+        let mut rng = seed
+            .map(StdRng::seed_from_u64)
+            .unwrap_or_else(|| StdRng::from_rng(&mut rng()));
 
-        let initial_collection = RoomCodeCollection::new(&mut s.rng, 1, initial_power);
-        s.collections.push(initial_collection);
-
-        s
+        let initial_collection = RoomCodeCollection::new(&mut rng, 1, initial_power);
+        
+        Self::new_with_rng_and_collection(
+            rng,
+            initial_collection,
+            capacity_threshold_to_remove
+        )
     }
 }
 

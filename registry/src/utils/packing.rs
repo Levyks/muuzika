@@ -1,7 +1,7 @@
 use prost::bytes::Bytes;
 use prost::Message;
 use tonic::{Code, Status};
-use crate::proto::registry::{registry_to_server_message, registry_to_server_request, registry_to_server_response, server_registration_error, RegistryToServerMessage, RegistryToServerRequest, RegistryToServerResponse, ServerRegistrationError};
+use crate::proto::registry::{registry_to_server_message, registry_to_server_request, registry_to_server_response, server_registration_error, server_to_registry_message, server_to_registry_request, server_to_registry_response, RegistryToServerMessage, RegistryToServerRequest, RegistryToServerResponse, ServerRegistrationError, ServerRegistrationRequest, ServerToRegistryMessage, ServerToRegistryRequest, ServerToRegistryResponse};
 
 impl From<ServerRegistrationError> for Status {
     fn from(error: ServerRegistrationError) -> Self {
@@ -62,3 +62,4 @@ impl RegistryToServerMessagePack for registry_to_server_request::Request {
         }
     }
 }
+
