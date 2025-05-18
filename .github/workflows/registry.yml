@@ -28,13 +28,13 @@ jobs:
           override: true
           profile: minimal
 
-      - name: Run tests and generate JUnit report
-        run: cargo test -- -Z unstable-options --format json --report-time | cargo2junit > test-results.xml
+      - name: Run tests
+        run: cargo test -- -Z unstable-options --format json --report-time > test-output.json
         env:
           RUSTC_BOOTSTRAP: 1
 
-      - name: Print test results xml
-        run: cat test-results.xml
+      - name: Convert test results to JUnit
+        run: cargo2junit < test-output.json > test-results.xml
 
       - name: Show test results in GitHub UI
         uses: dorny/test-reporter@v1
