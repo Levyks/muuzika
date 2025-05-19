@@ -1,7 +1,7 @@
 use crate::errors::{RequestError, RequestResult};
 use crate::handle_response_with_oneof_error;
 use crate::proto::common::RoomCode;
-use crate::proto::registry::{create_room_in_server_error, create_room_in_server_response, registry_to_server_request, server_to_registry_message, server_to_registry_response, CreateRoomInServerRequest, CreateRoomRequest, JoinRoomResponse, RegistryToServerMessage, RoomToken, ServerId, ServerInfo, ServerLoadInfo, ServerToRegistryMessage, ServerToRegistryRequest, ServerToRegistryResponse};
+use crate::proto::registry::{create_room_in_server_error, create_room_in_server_response, join_room_error, join_room_in_server_response, registry_to_server_request, server_to_registry_message, server_to_registry_response, CodeWithUsernameAndPassword, RegistryToServerMessage, RoomToken, ServerId, ServerInfo, ServerLoadInfo, ServerToRegistryMessage, ServerToRegistryRequest, ServerToRegistryResponse};
 use crate::registry::Registry;
 use crate::utils::packing::RegistryToServerMessagePack;
 use std::collections::{HashMap, HashSet};
@@ -117,13 +117,10 @@ impl ServerRunner {
         self.registry.write().await.remove_server(&self.id);
     }
 
-    pub async fn create_room(&self, room_code: RoomCode, request: CreateRoomRequest) -> RequestResult<RoomToken, create_room_in_server_error::Error> {
+    pub async fn create_room(&self, data: CodeWithUsernameAndPassword) -> RequestResult<RoomToken, create_room_in_server_error::Error> {
         let (request_id, rx) = self.add_pending().await;
 
-        let message = registry_to_server_request::Request::CreateRoom(CreateRoomInServerRequest {
-            code: Some(room_code),
-            request: Some(request),
-        }).pack(request_id);
+        let message = registry_to_server_request::Request::CreateRoom(data).pack(request_id);
 
         log::debug!("[{self}] Sending create room request: {message:?}");
         self.tx.send(Ok(message)).await.map_err(|_| RequestError::FailedToSend)?;
@@ -133,6 +130,22 @@ impl ServerRunner {
             server_to_registry_response::Response::CreateRoom,
             create_room_in_server_response::Response::Success,
             create_room_in_server_response::Response::Error
+        )
+    }
+
+    pub async fn join_room(&self, data: CodeWithUsernameAndPassword) -> RequestResult<RoomToken, join_room_error::Error> {
+        let (request_id, rx) = self.add_pending().await;
+
+        let message = registry_to_server_request::Request::JoinRoom(data).pack(request_id);
+
+        log::debug!("[{self}] Sending join room request: {message:?}");
+        self.tx.send(Ok(message)).await.map_err(|_| RequestError::FailedToSend)?;
+
+        handle_response_with_oneof_error!(
+            rx.await,
+            server_to_registry_response::Response::JoinRoom,
+            join_room_in_server_response::Response::Success,
+            join_room_in_server_response::Response::Error
         )
     }
 }

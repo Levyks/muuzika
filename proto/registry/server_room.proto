@@ -7,11 +7,6 @@ import "google/protobuf/empty.proto";
 import "registry/common.proto";
 import "registry/lobby.proto";
 
-message CreateRoomInServerRequest {
-  common.RoomCode code = 1;
-  CreateRoomRequest request = 2;
-}
-
 message CreateRoomInServerResponse {
   oneof response {
     RoomToken success = 1;

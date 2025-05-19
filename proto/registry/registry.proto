@@ -30,8 +30,8 @@ message ServerToRegistryResponse {
 
 message RegistryToServerRequest {
   oneof request {
-    CreateRoomInServerRequest create_room = 1;
-    JoinRoomRequest join_room = 2;
+    CodeWithUsernameAndPassword create_room = 1;
+    CodeWithUsernameAndPassword join_room = 2;
   }
 }
 

@@ -8,19 +8,19 @@ import "registry/common.proto";
 import "google/protobuf/empty.proto";
 
 service RegistryLobbyService {
-  rpc CreateRoom(CreateRoomRequest) returns (JoinRoomResponse);
-  rpc JoinRoom(JoinRoomRequest) returns (JoinRoomResponse);
+  rpc CreateRoom(UsernameAndPassword) returns (JoinRoomResponse);
+  rpc JoinRoom(CodeWithUsernameAndPassword) returns (JoinRoomResponse);
   rpc GetServerInfo(ServerId) returns (ServerInfo);
 }
 
-message CreateRoomRequest {
+message UsernameAndPassword {
   string username = 1;
   optional string password = 2;
 }
 
-message JoinRoomRequest {
+message CodeWithUsernameAndPassword {
   common.RoomCode code = 1;
-  CreateRoomRequest data = 2;
+  UsernameAndPassword username_and_password = 2;
 }
 
 message JoinRoomResponse {

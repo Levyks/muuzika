@@ -2,7 +2,7 @@ use crate::utils::{register_server_and_start_mock_thread, setup_test_server_with
 use muuzika_registry::proto::common::RoomCode;
 use muuzika_registry::proto::registry::registry_lobby_service_client::RegistryLobbyServiceClient;
 use muuzika_registry::proto::registry::registry_service_client::RegistryServiceClient;
-use muuzika_registry::proto::registry::{CreateRoomRequest, JoinRoomResponse, RoomToken, ServerId, ServerInfo, ServerLoadInfo, ServerRegistrationRequest};
+use muuzika_registry::proto::registry::{JoinRoomResponse, RoomToken, ServerId, ServerInfo, ServerLoadInfo, ServerRegistrationRequest, UsernameAndPassword};
 
 mod utils;
 
@@ -32,7 +32,7 @@ async fn test_creates_room_successfully() {
         .await
         .expect("Failed to connect to server");
 
-    let response = lobby_client.create_room(CreateRoomRequest {
+    let response = lobby_client.create_room(UsernameAndPassword {
         username: "test_user".to_string(),
         password: None,
     }).await.expect("Failed to create room").into_inner();
@@ -95,7 +95,7 @@ async fn test_creates_room_in_least_loaded_server() {
         .await
         .expect("Failed to connect to server");
 
-    let response = lobby_client.create_room(CreateRoomRequest {
+    let response = lobby_client.create_room(UsernameAndPassword {
         username: "test_user".to_string(),
         password: None,
     }).await.expect("Failed to create room").into_inner();

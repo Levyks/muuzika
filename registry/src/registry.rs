@@ -1,7 +1,7 @@
 use crate::errors::RequestError;
 use crate::generator::RoomCodeGenerator;
 use crate::proto::common::RoomCode;
-use crate::proto::registry::{create_room_error, create_room_in_server_error, server_registration_error, CreateRoomRequest, JoinRoomResponse, RoomCodeChange, ServerId, ServerInfo, ServerRegistrationError, ServerRegistrationSuccess};
+use crate::proto::registry::{create_room_error, create_room_in_server_error, join_room_error, server_registration_error, CodeWithUsernameAndPassword, JoinRoomResponse, RoomCodeChange, ServerId, ServerInfo, ServerRegistrationError, ServerRegistrationSuccess, UsernameAndPassword};
 use crate::server::Server;
 use nanoid::nanoid;
 use std::collections::hash_map::Entry;
@@ -69,16 +69,7 @@ impl Registry {
         })
     }
 
-    pub fn remove_server(&mut self, server_id: &ServerId) {
-        if let Some(server) = self.servers.remove(server_id) {
-            for room_code in server.rooms {
-                self.rooms.remove(&room_code);
-                self.room_code_generator.return_code(room_code);
-            }
-        }
-    }
-
-    pub async fn create_room(self_lock: &Arc<RwLock<Self>>, request: CreateRoomRequest) -> Result<JoinRoomResponse, create_room_error::Error> {
+    pub async fn create_room(self_lock: &Arc<RwLock<Self>>, request: UsernameAndPassword) -> Result<JoinRoomResponse, create_room_error::Error> {
         let log_id = nanoid!();
         log::debug!("[{log_id}] Creating room with request: {request:?}");
 
@@ -94,7 +85,12 @@ impl Registry {
             };
             log::debug!("[{log_id}] Attempting to create room on server: {server_info:?} with room code: {room_code}");
 
-            let token = match runner.create_room(room_code.clone(), request.clone()).await {
+            let request = CodeWithUsernameAndPassword {
+                code: Some(room_code.clone()),
+                username_and_password: Some(request.clone()),
+            };
+
+            let token = match runner.create_room(request).await {
                 Ok(token) => token,
                 Err(err) => {
                     log::warn!("[{log_id}] Failed to create room in attempt {attempt}: {err:?}");
@@ -124,10 +120,63 @@ impl Registry {
         };
     }
 
+    pub async fn join_room(self_lock: &Arc<RwLock<Self>>, room_code: RoomCode, request: CodeWithUsernameAndPassword) -> Result<JoinRoomResponse, join_room_error::Error> {
+        let log_id = nanoid!();
+        log::debug!("[{log_id}] Joining room with request: {request:?}");
+
+        let (server_info, runner) = {
+            let mut registry = self_lock.write().await;
+            let server_id = registry.rooms.get(&room_code).ok_or(join_room_error::Error::RoomNotFound(()))?;
+            match registry.servers.get(server_id) {
+                Some(server) => (server.info(), server.runner.clone()),
+                None => {
+                    log::warn!("[{log_id}] Could not find server {server_id}, removing room {room_code}");
+                    registry.remove_room(&room_code);
+                    return Err(join_room_error::Error::InternalError(()));
+                }
+            }
+        };
+
+        let token = match runner.join_room(request).await {
+            Ok(token) => token,
+            Err(RequestError::ErrorResponse(join_room_error::Error::RoomNotFound(_))) => {
+                log::warn!("[{log_id}] Room {room_code} not found on server {}, removing from registry", runner.id);
+                self_lock.write().await.rooms.remove(&room_code);
+                Err(join_room_error::Error::RoomNotFound(()))?
+            }
+            Err(RequestError::ErrorResponse(err)) => Err(err)?,
+            _ => Err(join_room_error::Error::InternalError(()))?,
+        };
+
+        Ok(JoinRoomResponse {
+            server: Some(server_info),
+            token: Some(token),
+            code: Some(room_code),
+        })
+    }
+
     fn add_room(&mut self, room_code: &RoomCode, server_id: &ServerId) {
         self.rooms.insert(room_code.clone(), server_id.clone());
         if let Some(server) = self.servers.get_mut(server_id) {
             server.rooms.insert(room_code.clone());
+        }
+    }
+
+    fn remove_room(&mut self, room_code: &RoomCode) {
+        self.room_code_generator.return_code(room_code.clone());
+        if let Some(server_id) = self.rooms.remove(room_code) {
+            if let Some(server) = self.servers.get_mut(&server_id) {
+                server.rooms.remove(room_code);
+            }
+        }
+    }
+
+    pub fn remove_server(&mut self, server_id: &ServerId) {
+        if let Some(server) = self.servers.remove(server_id) {
+            for room_code in server.rooms {
+                self.rooms.remove(&room_code);
+                self.room_code_generator.return_code(room_code);
+            }
         }
     }
 
